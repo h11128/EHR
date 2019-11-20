@@ -159,6 +159,12 @@ def getLinesActor():
 
   return actor
   
+def featureVector(rootTable):
+  rowsCount = rootTable.GetNumberOfRows()
+  colsCount = rootTable.GetNumberOfColumns()
+  total_feature = [[1,0,0],[0,1,0]]
+
+
 
 if __name__ == '__main__':
   EHRDataPath = sys.argv[1]
@@ -170,8 +176,11 @@ if __name__ == '__main__':
   reader.Update()
 
   rootTable = reader.GetOutput()
-  rowsCount = rootTable.GetNumberOfRows()
-  colsCount = rootTable.GetNumberOfColumns()
+ 
+
+
+
+
 
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
