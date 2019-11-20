@@ -4,33 +4,71 @@ import sys
 max_record = 40
 max_person = 10
 
+class PointSet():
+  def __init__(self, points):
+    self.sphereSource = vtk.vtkSphereSource()
+    # sphereSource.SetCenter(0.0, 0.0, 0.0)
+    self.sphereSource.SetRadius(0.01)
+
+    self.points = points
+    self.points.SetNumberOfPoints(max_record*max_person)
+
+    self.graph = vtk.vtkPolyData()
+    self.graph.SetPoints(points)
+
+    self.glyph3D = vtk.vtkGlyph3D()
+    self.glyph3D.SetSourceConnection(self.sphereSource.GetOutputPort())
+    self.glyph3D.SetInputData(self.graph)
+    self.glyph3D.Update()
+
+    self.mapper = vtk.vtkPolyDataMapper()
+    self.mapper.SetInputConnection(self.glyph3D.GetOutputPort())
+    self.mapper.Update()
+    self.actor = vtk.vtkActor()
+    self.actor.SetMapper(self.mapper)
+
 class pointCallBack(object):
-  def __init__(self, sliderRep, sliderRep2, points, max_record, max_person, actor):
+  def __init__(self, sliderRep, sliderRep2, pointset, max_record, max_person):
     self.sliderRep = sliderRep
     self.sliderRep2 = sliderRep2
-    self.points = points
+    self.pointset = pointset
     self.max_record = max_record
     self.max_person = max_person
-    self.pointsActor = actor
 
     super().__init__()
 
   def __call__(self, caller, event):
-    print("the value is " + str(self.sliderRep.GetValue()))
+    # print("the value is " + str(self.sliderRep.GetValue()))
     person = int(self.sliderRep2.GetValue())
     record = int(self.sliderRep.GetValue())
+
+    self.pointset.sphereSource = vtk.vtkSphereSource()
+    # # sphereSource.SetCenter(0.0, 0.0, 0.0)
+    self.pointset.sphereSource.SetRadius(0.01)
 
     for i in range(max_person):
       for j in range(max_record):
         index = (i) * max_record + j
         if (i>person or j >record):
-          points.SetPoint(index, 0,0,0)
+          self.pointset.points.SetPoint(index, 0,0,0)
         else:
-          points.SetPoint(index, 0.01*i,0.01*i,0.01*j)
-    pointsActor.GetProperty().SetColor(1,0,0)
-    pointsActor.Modified()
-    print("person: %d record: %d"% (person, record))
-    print(points.GetNumberOfPoints())
+          self.pointset.points.SetPoint(index, 0.01*i,0.01*i,0.01*j)
+
+    # g = vtk.vtkPolyData()
+    self.pointset.graph.SetPoints(self.pointset.points)
+
+    # glyph3D = vtk.vtkGlyph3D()
+    pointset.glyph3D.SetSourceConnection(pointset.sphereSource.GetOutputPort())
+    self.pointset.glyph3D.SetInputData(self.pointset.graph)
+    self.pointset.glyph3D.Update()
+
+    pointset.mapper.SetInputConnection(pointset.glyph3D.GetOutputPort())
+    self.pointset.mapper.Update()
+    self.pointset.actor.SetMapper(self.pointset.mapper)
+    self.pointset.actor.GetProperty().SetColor(1,0,0)
+    self.pointset.actor.Modified()
+    # print("person: %d record: %d"% (person, record))
+    # print(self.pointset.points.GetNumberOfPoints())
 
 def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep = vtk.vtkSliderRepresentation2D()
@@ -43,7 +81,7 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep.GetPoint1Coordinate().SetCoordinateSystemToDisplay()
   sliderRep.GetPoint1Coordinate().SetValue(x, y)
   sliderRep.GetPoint2Coordinate().SetCoordinateSystemToDisplay()
-  sliderRep.GetPoint2Coordinate().SetValue(x+200, y)
+  sliderRep.GetPoint2Coordinate().SetValue(x+400, y)
   sliderRep.BuildRepresentation()
 
   sliderWidget = vtk.vtkSliderWidget()
@@ -53,32 +91,6 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderWidget.EnabledOn()
   return sliderRep, sliderWidget
 
-
-
-def getPointsActor():
-  sphereSource = vtk.vtkSphereSource()
-  # sphereSource.SetCenter(0.0, 0.0, 0.0)
-  sphereSource.SetRadius(0.01)
-
-  points = vtk.vtkPoints()
-  points.SetNumberOfPoints(max_record*max_person)
-
-  g = vtk.vtkPolyData()
-  g.SetPoints(points)
-
-  glyph3D = vtk.vtkGlyph3D()
-  glyph3D.SetSourceConnection(sphereSource.GetOutputPort())
-  glyph3D.SetInputData(g)
-  glyph3D.Update()
-
-  
-  mapper = vtk.vtkPolyDataMapper()
-  mapper.SetInputConnection(glyph3D.GetOutputPort())
-  mapper.Update()
-  actor = vtk.vtkActor()
-  actor.SetMapper(mapper)
-
-  return points, actor
 
 def getLinesActor():
   linesPolyData = vtk.vtkPolyData()
@@ -173,10 +185,13 @@ if __name__ == '__main__':
   sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 40, renderWindowInteractor, "record")
   sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 80, renderWindowInteractor, "person")
   
-  points, pointsActor = getPointsActor()
+  # points, pointsActor = getPointsActor()
+  points = vtk.vtkPoints()
+
+  pointset = PointSet(points)
   linesActor = getLinesActor()
 
-  callback = pointCallBack(sliderRep1, sliderRep2, points,  max_record, max_person, pointsActor)
+  callback = pointCallBack(sliderRep1, sliderRep2, pointset,  max_record, max_person)
   sliderWidget1.AddObserver("InteractionEvent", callback)
   #callback2 = pointCallBack(sliderRep1, sliderRep2, points)
   sliderWidget2.AddObserver("InteractionEvent", callback)
@@ -184,9 +199,9 @@ if __name__ == '__main__':
   axes = vtk.vtkAxesActor()
 
   renderer.AddActor(axes)
-  renderer.AddActor(pointsActor)
+  renderer.AddActor(pointset.actor)
   renderer.AddActor(linesActor)
   renderer.ResetCamera()
   renderWindow.Render()
-  renderWindow.SetSize(1000, 1000)
+  renderWindow.SetSize(2000, 1500)
   renderWindowInteractor.Start()
