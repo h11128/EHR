@@ -66,6 +66,7 @@ date_injury = normallize_continuous(injury_time)
 pre_max_days = normallize_continuous(pre_max_days)
 post_max_days = normallize_continuous(post_max_days)
 frequency = normallize_continuous(frequency)
+injury_time = normallize_continuous(injury_time)
 the_data = [patient_id, frequency, gender, age_group, date_injury, pre_max_days, post_max_days, patient_normalize, injury_time]
 
 # csv_file = open('csv_file.csv', 'w')
