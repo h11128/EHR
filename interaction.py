@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import math
-df=pd.read_excel('D:\Google\CSE5544DataVisua/assign4/EHRdataSample.xlsx')
+df=pd.read_excel('EHRdataSample.xlsx')
 df['PatientID']=df['PatientID'].astype('object')
 symptom_attrs = [
     'Stress', 'PTSD','Speech', 'Anxiety', 'Depression', 'Headache', 'Sleep', 'Audiology',
@@ -23,7 +23,7 @@ for p in PatientID:
 totalUniqueNum=[]
 for p in PatientID:
     df_p=df[df['PatientID']==p]
-    count=0;
+    count=0
     for s in symptom_attrs:
         if any(df_p[s]!=0):
             count=count+1
@@ -202,7 +202,7 @@ def main():
     widget_mid.AddObserver("InteractionEvent", SliderCallbackMidPoint)
     widget_mid.EnabledOn()
     global collection #=vtkActorCollection()
-    collection=renderer.GetActors();
+    collection=renderer.GetActors()
     # Start
     interactor.Initialize()
     renwin.Render()
