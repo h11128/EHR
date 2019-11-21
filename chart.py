@@ -84,7 +84,7 @@ class pointCallBack(object):
       self.personlist[i].mapper.Update()
       actor = actorList[i]
       actor.SetMapper(self.personlist[i].mapper)
-      actor.GetProperty().SetColor(1-i/max_person,i/max_person,0)
+      actor.GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
       actor.Modified()
     # print("person: %d record: %d"% (person, record))
     # print(self.pointset.points.GetNumberOfPoints())
@@ -142,21 +142,6 @@ def getLinesActor(feature):
         colors.InsertNextTypedTuple(namedColors.GetColor3ub("White"))
   # Add the lines to the polydata container
   linesPolyData.SetLines(lines)
-
-  
-
-  # Create a vtkUnsignedCharArray container and store the colors in it
-  
-  
-
-
-  # Color the lines.
-  # SetScalars() automatically associates the values in the data array passed as parameter
-  # to the elements in the same indices of the cell data array on which it is called.
-  # This means the first component (red) of the colors array
-  # is matched with the first component of the cell array (line 0)
-  # and the second component (green) of the colors array
-  # is matched with the second component of the cell array (line 1)
   linesPolyData.GetCellData().SetScalars(colors)
 
   # Setup the visualization pipeline
@@ -183,23 +168,25 @@ def computeVector(rho_x, rho_y, rho_z, angle1, angle2, mode):
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
 
-  total_feature = [[1,0,0],[0,1,0],[0,0,0],[0,0,0],[0,0,0], [0,0,1]]
+  total_feature = [[1,0,0],[0,1,0],[0,0,1]]
+  for i in range(5):
+    total_feature.append([0,0,0])
   # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
   features = []
-  for i in range(6):
+  for i in range(8):
     features.append(list(pd_read.iloc[:,i+1]))
   rowsCount = len(features[0])
   colsCount = len(features)
   
   angle1 = random.random()*math.pi
   angle2 = random.random()*math.pi
-  for i in range(2,5):
+  for i in range(5):
     rho_x, _ = pearsonr(features[0], features[i])
     rho_y, _ = pearsonr(features[1], features[i])
-    rho_z, _ = pearsonr(features[5], features[i])
+    rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
-    angle2 = (abs(rho_z) +1)/ 2
-    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 2)
+    angle2 = (abs(rho_z) +1)/ 2 * math.pi
+    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 0)
     total_feature[i] = vector
 
   return total_feature
@@ -208,7 +195,7 @@ def pointCalculate(rootTable, feature):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
 
-  points_data = [(0,0,0,0,0,0) for _ in range(max_person*max_record)]
+  points_data = [(0,0,0,0,0,0,0,0) for _ in range(max_person*max_record)]
   
   patient_count = 0
   patient = {}
