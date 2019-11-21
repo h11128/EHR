@@ -63,11 +63,11 @@ class pointCallBack(object):
 
       for j in range(max_record):
         index = (i)*max_record + j
-        print(i, j, index)
+        #print(i, j, index)
         if (person ==0 or record ==0):
           self.personlist[i].points.SetPoint(0,0,0,0)
         elif (i>person or j >record):
-          self.personlist[i].points.SetPoint(0, 1,0,0)
+          self.personlist[i].points.SetPoint(0, 0,0,0)
         else:
           self.personlist[i].points.SetPoint(j, self.point_xyz[index])
 
@@ -83,7 +83,7 @@ class pointCallBack(object):
       self.personlist[i].mapper.Update()
       actor = actorList[i]
       actor.SetMapper(self.personlist[i].mapper)
-      actor.GetProperty().SetColor(0,1,0)
+      actor.GetProperty().SetColor(1-i/max_person,i/max_person,0)
       actor.Modified()
     # print("person: %d record: %d"% (person, record))
     # print(self.pointset.points.GetNumberOfPoints())
@@ -110,20 +110,21 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   return sliderRep, sliderWidget
 
 
-def getLinesActor():
+def getLinesActor(feature):
   linesPolyData = vtk.vtkPolyData()
 
   # Create three points
   origin = [0.0, 0.0, 0.0]
-  p0 = [1.0, 1.0, 0.0]
-  p1 = [0.0, 1.0, 1.0]
+  p0 = feature[2]
+  p1 = feature[3]
+  p2 = feature[4]
 
   # Create a vtkPoints container and store the points in it
   pts = vtk.vtkPoints()
   pts.InsertNextPoint(origin)
   pts.InsertNextPoint(p0)
   pts.InsertNextPoint(p1)
-
+  pts.InsertNextPoint(p2)
   # Add the points to the polydata container
   linesPolyData.SetPoints(pts)
 
@@ -137,10 +138,16 @@ def getLinesActor():
   line1.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
   line1.GetPointIds().SetId(1, 2)  # 2 is the index of P1 in linesPolyData's points
 
+  line2 = vtk.vtkLine()
+  line2.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
+  line2.GetPointIds().SetId(1, 3)  # 2 is the index of P1 in linesPolyData's points
+
+
   # Create a vtkCellArray container and store the lines in it
   lines = vtk.vtkCellArray()
   lines.InsertNextCell(line0)
   lines.InsertNextCell(line1)
+  lines.InsertNextCell(line2)
 
   # Add the lines to the polydata container
   linesPolyData.SetLines(lines)
@@ -153,10 +160,12 @@ def getLinesActor():
   try:
       colors.InsertNextTupleValue(namedColors.GetColor3ub("Tomato"))
       colors.InsertNextTupleValue(namedColors.GetColor3ub("Mint"))
+      colors.InsertNextTupleValue(namedColors.GetColor3ub("Red"))
   except AttributeError:
       # For compatibility with new VTK generic data arrays.
       colors.InsertNextTypedTuple(namedColors.GetColor3ub("Tomato"))
       colors.InsertNextTypedTuple(namedColors.GetColor3ub("Mint"))
+      colors.InsertNextTypedTuple(namedColors.GetColor3ub("Red"))
 
   # Color the lines.
   # SetScalars() automatically associates the values in the data array passed as parameter
@@ -180,9 +189,11 @@ def getLinesActor():
 def computeVector(rho_x, rho_y, rho_z, angle1, angle2, mode):
   if mode == 0:
     vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
-  if mode == 1:
+  elif mode == 1:
     vector = [-rho_x, -rho_y, -rho_z]
-  length = sum([i*i for i in vector])
+  elif mode ==2:
+    vector = [rho_x, rho_y, rho_z]
+  length = math.sqrt(sum([i*i for i in vector]))
   final_vector = [i/length for i in vector]
   return final_vector
 
@@ -205,7 +216,7 @@ def featureVector(filename):
     rho_z, _ = pearsonr(features[5], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2
-    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 0)
+    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 2)
     total_feature[i] = vector
 
   return total_feature
@@ -262,7 +273,7 @@ if __name__ == '__main__':
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
   point_xyz = pointCalculate(rootTable, feature)
-
+  print(len(point_xyz))
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
@@ -278,9 +289,10 @@ if __name__ == '__main__':
   # points, pointsActor = getPointsActor()
   points = vtk.vtkPoints()
   personlist = []
+  print(feature)
   for i in range(max_person):
     personlist.append(PointSet(i, feature, points))
-  linesActor = getLinesActor()
+  linesActor = getLinesActor(feature)
   actorList = []
   for i in range(max_person):
       actor = vtk.vtkActor()
