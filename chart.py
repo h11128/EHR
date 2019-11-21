@@ -115,57 +115,36 @@ def getLinesActor(feature):
 
   # Create three points
   origin = [0.0, 0.0, 0.0]
-  p0 = feature[2]
-  p1 = feature[3]
-  p2 = feature[4]
 
   # Create a vtkPoints container and store the points in it
   pts = vtk.vtkPoints()
   pts.InsertNextPoint(origin)
-  pts.InsertNextPoint(p0)
-  pts.InsertNextPoint(p1)
-  pts.InsertNextPoint(p2)
-  # Add the points to the polydata container
   linesPolyData.SetPoints(pts)
-
-  # Create the first line (between Origin and P0)
-  line0 = vtk.vtkLine()
-  line0.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
-  line0.GetPointIds().SetId(1, 1)  # the second 1 is the index of P0 in linesPolyData's points
-
-  # Create the second line (between Origin and P1)
-  line1 = vtk.vtkLine()
-  line1.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
-  line1.GetPointIds().SetId(1, 2)  # 2 is the index of P1 in linesPolyData's points
-
-  line2 = vtk.vtkLine()
-  line2.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
-  line2.GetPointIds().SetId(1, 3)  # 2 is the index of P1 in linesPolyData's points
-
-
-  # Create a vtkCellArray container and store the lines in it
   lines = vtk.vtkCellArray()
-  lines.InsertNextCell(line0)
-  lines.InsertNextCell(line1)
-  lines.InsertNextCell(line2)
-
+  colors = vtk.vtkUnsignedCharArray()
+  colors.SetNumberOfComponents(3)
+  namedColors = vtk.vtkNamedColors()
+  for i in range(len(feature)):
+    pts.InsertNextPoint(feature[i])
+      # Create the first line (between Origin and P0)
+    line0 = vtk.vtkLine()
+    line0.GetPointIds().SetId(0, 0)  # the second 0 is the index of the Origin in linesPolyData's points
+    line0.GetPointIds().SetId(1, i+1)
+    lines.InsertNextCell(line0)
+    try:
+        colors.InsertNextTupleValue(namedColors.GetColor3ub("White"))
+    except AttributeError:
+        # For compatibility with new VTK generic data arrays.
+        colors.InsertNextTypedTuple(namedColors.GetColor3ub("White"))
   # Add the lines to the polydata container
   linesPolyData.SetLines(lines)
 
-  namedColors = vtk.vtkNamedColors()
+  
 
   # Create a vtkUnsignedCharArray container and store the colors in it
-  colors = vtk.vtkUnsignedCharArray()
-  colors.SetNumberOfComponents(3)
-  try:
-      colors.InsertNextTupleValue(namedColors.GetColor3ub("Tomato"))
-      colors.InsertNextTupleValue(namedColors.GetColor3ub("Mint"))
-      colors.InsertNextTupleValue(namedColors.GetColor3ub("Red"))
-  except AttributeError:
-      # For compatibility with new VTK generic data arrays.
-      colors.InsertNextTypedTuple(namedColors.GetColor3ub("Tomato"))
-      colors.InsertNextTypedTuple(namedColors.GetColor3ub("Mint"))
-      colors.InsertNextTypedTuple(namedColors.GetColor3ub("Red"))
+  
+  
+
 
   # Color the lines.
   # SetScalars() automatically associates the values in the data array passed as parameter
@@ -274,6 +253,7 @@ if __name__ == '__main__':
   feature = featureVector(EHRDataPath)
   point_xyz = pointCalculate(rootTable, feature)
   print(len(point_xyz))
+  print(point_xyz)
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
@@ -286,32 +266,41 @@ if __name__ == '__main__':
   sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 40, renderWindowInteractor, "record")
   sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 80, renderWindowInteractor, "person")
   
+  balloonRep = vtk.vtkBalloonRepresentation()
+  balloonRep.SetBalloonLayoutToImageRight()
+  balloonWidget = vtk.vtkBalloonWidget()
+  balloonWidget.SetInteractor(renderWindowInteractor)
+  balloonWidget.SetRepresentation(balloonRep)
+
+
   # points, pointsActor = getPointsActor()
   points = vtk.vtkPoints()
   personlist = []
-  print(feature)
+  
   for i in range(max_person):
     personlist.append(PointSet(i, feature, points))
   linesActor = getLinesActor(feature)
   actorList = []
   for i in range(max_person):
+
       actor = vtk.vtkActor()
       actor.SetMapper(personlist[i].mapper)
       actor.GetProperty().SetColor(0,1,0)
       actor.Modified()
       actorList.append(actor)
+      balloonWidget.AddBalloon(actor, 'Patient{}'.format(i))
   callback = pointCallBack(sliderRep1, sliderRep2, personlist,  max_record, max_person, point_xyz, actorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
-  #callback2 = pointCallBack(sliderRep1, sliderRep2, points)
   sliderWidget2.AddObserver("InteractionEvent", callback)
   
   axes = vtk.vtkAxesActor()
 
-  renderer.AddActor(axes)
+  #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
   renderer.AddActor(linesActor)
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
+  balloonWidget.EnabledOn()
   renderWindowInteractor.Start()
