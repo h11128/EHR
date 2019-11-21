@@ -43,7 +43,7 @@ def normallize_continuous(X):
 patient_id = table.col_values(0, 1)
 gender = table.col_values(1, 1)
 age_group = table.col_values(3,1)
-date_injury = table.col_values(6, 1)
+date_injury = table.col_values(9, 1)
 pre_max_days = table.col_values(16, 1)
 post_max_days = table.col_values(17, 1)
 injury_time = []
@@ -59,13 +59,14 @@ for i in range(0, m-1):
     value += table.cell(i+1, k).value
   frequency.append(value)
 
+patient_normalize = normallize_categorical(patient_id)
 gender = normallize_categorical(gender)
 age_group = normallize_categorical(age_group)
 date_injury = normallize_continuous(injury_time)
 pre_max_days = normallize_continuous(pre_max_days)
 post_max_days = normallize_continuous(post_max_days)
 frequency = normallize_continuous(frequency)
-the_data = [patient_id, gender, age_group, date_injury, pre_max_days, post_max_days, frequency]
+the_data = [patient_id, frequency, gender, age_group, date_injury, pre_max_days, post_max_days, patient_normalize, injury_time]
 
 # csv_file = open('csv_file.csv', 'w')
 # wr = csv.writer(csv_file, quoting=csv.QUOTE_ALL)
@@ -74,8 +75,8 @@ the_data = [patient_id, gender, age_group, date_injury, pre_max_days, post_max_d
 
 # csv_file.close()
 for i in range(len(gender)):
-  for j in range(7):
-    if j!=6:
+  for j in range(len(the_data)):
+    if j!=len(the_data)-1:
       print(the_data[j][i], end=',')
     else:
       print(the_data[j][i])
