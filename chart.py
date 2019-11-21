@@ -40,9 +40,10 @@ class PointSet():
 
 
 class pointCallBack(object):
-  def __init__(self, sliderRep, sliderRep2, personlist, max_record, max_person, point_xyz, actorList):
+  def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, max_record, max_person, point_xyz, actorList):
     self.sliderRep = sliderRep
     self.sliderRep2 = sliderRep2
+    self.sliderRep3 = sliderRep3
     self.personlist = personlist
     self.max_record = max_record
     self.max_person = max_person
@@ -54,12 +55,12 @@ class pointCallBack(object):
     # print("the value is " + str(self.sliderRep.GetValue()))
     person = int(self.sliderRep2.GetValue())
     record = int(self.sliderRep.GetValue())
-
+    pointSize = float(self.sliderRep3.GetValue())
 
     for i in range(max_person):
       self.personlist[i].sphereSource = vtk.vtkSphereSource()
       # # sphereSource.SetCenter(0.0, 0.0, 0.0)
-      self.personlist[i].sphereSource.SetRadius(0.01)
+      self.personlist[i].sphereSource.SetRadius(pointSize)
 
       for j in range(max_record):
         index = (i)*max_record + j
@@ -93,7 +94,10 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep.SetRenderer(renderer)
   sliderRep.SetMinimumValue(0)
   sliderRep.SetMaximumValue(maximum)
-  sliderRep.SetValue(0)
+  if title == 'point size':
+    sliderRep.SetValue(0.05)
+  else:
+    sliderRep.SetValue(0)
   sliderRep.SetTitleText(title)
 
   sliderRep.GetPoint1Coordinate().SetCoordinateSystemToDisplay()
@@ -273,7 +277,6 @@ if __name__ == '__main__':
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
   point_xyz = pointCalculate(rootTable, feature)
-  print(len(point_xyz))
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
@@ -283,13 +286,13 @@ if __name__ == '__main__':
   renderWindowInteractor.SetRenderWindow(renderWindow)
 
   
-  sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 40, renderWindowInteractor, "record")
-  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 80, renderWindowInteractor, "person")
+  sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 540, renderWindowInteractor, "record")
+  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
+  sliderRep3, sliderWidget3 = slider(renderer, 0.1, 40, 140, renderWindowInteractor, "point size")
   
   # points, pointsActor = getPointsActor()
   points = vtk.vtkPoints()
   personlist = []
-  print(feature)
   for i in range(max_person):
     personlist.append(PointSet(i, feature, points))
   linesActor = getLinesActor(feature)
@@ -300,10 +303,11 @@ if __name__ == '__main__':
       actor.GetProperty().SetColor(0,1,0)
       actor.Modified()
       actorList.append(actor)
-  callback = pointCallBack(sliderRep1, sliderRep2, personlist,  max_record, max_person, point_xyz, actorList)
+  callback = pointCallBack(sliderRep1, sliderRep2, sliderRep3, personlist,  max_record, max_person, point_xyz, actorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
   #callback2 = pointCallBack(sliderRep1, sliderRep2, points)
   sliderWidget2.AddObserver("InteractionEvent", callback)
+  sliderWidget3.AddObserver("InteractionEvent", callback)
   
   axes = vtk.vtkAxesActor()
 
