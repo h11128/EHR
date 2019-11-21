@@ -3,6 +3,8 @@ import sys
 import math
 import random
 import numpy as np
+import pandas as pd
+from scipy.stats import pearsonr
 
 max_record = 500
 max_person = 41
@@ -164,21 +166,39 @@ def getLinesActor():
 
   return actor
   
-def featureVector(rootTable):
-  rowsCount = rootTable.GetNumberOfRows()
-  colsCount = rootTable.GetNumberOfColumns()
-  
-  total_feature = [[1,0,0],[0,1,0],[0,0,0],[0,0,0],[0,0,0], [0,0,1]]
+def computeVector(rho_x, rho_y, rho_z, angle1, angle2, mode):
+  if mode == 0:
+    vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
+  if mode == 1:
+    vector = [-rho_x, -rho_y, -rho_z]
+  length = sum([i*i for i in vector])
+  final_vector = [i/length for i in vector]
+  return final_vector
 
+def featureVector(filename):
+  pd_read = pd.read_csv(filename)
+
+  total_feature = [[1,0,0],[0,1,0],[0,0,0],[0,0,0],[0,0,0], [0,0,1]]
+  # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+  features = []
+  for i in range(6):
+    features.append(list(pd_read.iloc[:,i+1]))
+  rowsCount = len(features[0])
+  colsCount = len(features)
+  
   angle1 = random.random()*math.pi
   angle2 = random.random()*math.pi
-  for i in range(3):
-    vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
-    total_feature[i+2] = vector
-  #print(total_feature)
+  for i in range(2,5):
+    rho_x, _ = pearsonr(features[0], features[i])
+    rho_y, _ = pearsonr(features[1], features[i])
+    rho_z, _ = pearsonr(features[5], features[i])
+    angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
+    angle2 = (abs(rho_z) +1)/ 2
+    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 0)
+    total_feature[i] = vector
+
   return total_feature
   
-
 def pointCalculate(rootTable, feature):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
@@ -229,7 +249,7 @@ if __name__ == '__main__':
   reader.Update()
 
   rootTable = reader.GetOutput()
-  feature = featureVector(rootTable)
+  feature = featureVector(EHRDataPath)
   point_xyz = pointCalculate(rootTable, feature)
 
   renderer = vtk.vtkRenderer()
