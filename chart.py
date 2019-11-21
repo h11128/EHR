@@ -16,10 +16,12 @@ class PointSet():
     self.sphereSource.SetRadius(0.01)
     self.point_xyz = point_xyz
     self.points = points
-    self.points.SetDataTypeToFloat()
-    self.points.SetNumberOfPoints(max_record*max_person + len(feature))
-    for i in range(len(feature)):
-      self.points.SetPoint(max_record*max_person +i, feature[i])
+    # self.points.SetDataTypeToFloat()
+    # self.points.SetNumberOfPoints(max_record*max_person + len(feature))
+    self.points.SetNumberOfPoints(max_person * max_record)
+    # for i in range(len(feature)):
+    #   self.points.SetPoint(max_record*max_person +i, feature[i])
+      
     self.graph = vtk.vtkPolyData()
     self.graph.SetPoints(points)
 
@@ -33,6 +35,7 @@ class PointSet():
     self.mapper.Update()
     self.actor = vtk.vtkActor()
     self.actor.SetMapper(self.mapper)
+    self.actor.GetProperty().SetColor(1,0,0)
 
 class pointCallBack(object):
   def __init__(self, sliderRep, sliderRep2, pointset, max_record, max_person):
@@ -57,20 +60,24 @@ class pointCallBack(object):
       for j in range(max_record):
         index = (i) * max_record + j
         if (i>person or j >record):
-          self.pointset.points.SetPoint(index, 1,1,1)
+          # self.pointset.points.SetPoint(index, 1,1,1)
+          self.pointset.points.SetPoint(index, 0,0,0)
         else:
-          self.pointset.points.SetPoint(index, self.pointset.point_xyz[index])
+          # self.pointset.points.SetPoint(index, self.pointset.point_xyz[index])
+          self.pointset.points.SetPoint(index, 0.01*i, 0.01*i, 0.01*j)
 
-    # g = vtk.vtkPolyData()
+    # self.pointset.graph = vtk.vtkPolyData()
     self.pointset.graph.SetPoints(self.pointset.points)
 
-    # glyph3D = vtk.vtkGlyph3D()
+    # pointset.glyph3D = vtk.vtkGlyph3D()
     pointset.glyph3D.SetSourceConnection(pointset.sphereSource.GetOutputPort())
     self.pointset.glyph3D.SetInputData(self.pointset.graph)
     self.pointset.glyph3D.Update()
 
+    pointset.mapper = vtk.vtkPolyDataMapper()
     pointset.mapper.SetInputConnection(pointset.glyph3D.GetOutputPort())
     self.pointset.mapper.Update()
+    # pointset.actor = vtk.vtkActor()
     self.pointset.actor.SetMapper(self.pointset.mapper)
     self.pointset.actor.GetProperty().SetColor(1,0,0)
     self.pointset.actor.Modified()
