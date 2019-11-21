@@ -194,7 +194,7 @@ def main():
 
         renderer.AddActor(actor)
 
-    rep_mid = MakeRep("MidPoint", (5, 30), 10, 0.025, 0.45) 
+    rep_mid = MakeRep("PointSize", (5, 30), 10, 0.025, 0.45) 
     widget_mid = vtk.vtkSliderWidget()
     widget_mid.SetInteractor(interactor)
     widget_mid.SetRepresentation(rep_mid)
