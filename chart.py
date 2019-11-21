@@ -1,18 +1,23 @@
 import vtk
 import sys
+import math
+import random
+import numpy as np
 
-max_record = 40
-max_person = 10
+max_record = 500
+max_person = 41
 
 class PointSet():
-  def __init__(self, points):
+  def __init__(self, points, feature, point_xyz):
     self.sphereSource = vtk.vtkSphereSource()
     # sphereSource.SetCenter(0.0, 0.0, 0.0)
     self.sphereSource.SetRadius(0.01)
-
+    self.point_xyz = point_xyz
     self.points = points
-    self.points.SetNumberOfPoints(max_record*max_person)
-
+    self.points.SetDataTypeToFloat()
+    self.points.SetNumberOfPoints(max_record*max_person + len(feature))
+    for i in range(len(feature)):
+      self.points.SetPoint(max_record*max_person +i, feature[i])
     self.graph = vtk.vtkPolyData()
     self.graph.SetPoints(points)
 
@@ -50,9 +55,9 @@ class pointCallBack(object):
       for j in range(max_record):
         index = (i) * max_record + j
         if (i>person or j >record):
-          self.pointset.points.SetPoint(index, 0,0,0)
+          self.pointset.points.SetPoint(index, 1,1,1)
         else:
-          self.pointset.points.SetPoint(index, 0.01*i,0.01*i,0.01*j)
+          self.pointset.points.SetPoint(index, self.pointset.point_xyz[index])
 
     # g = vtk.vtkPolyData()
     self.pointset.graph.SetPoints(self.pointset.points)
@@ -162,7 +167,55 @@ def getLinesActor():
 def featureVector(rootTable):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
-  total_feature = [[1,0,0],[0,1,0]]
+  
+  total_feature = [[1,0,0],[0,1,0],[0,0,0],[0,0,0],[0,0,0], [0,0,1]]
+
+  angle1 = random.random()*math.pi
+  angle2 = random.random()*math.pi
+  for i in range(3):
+    vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
+    total_feature[i+2] = vector
+  #print(total_feature)
+  return total_feature
+  
+
+def pointCalculate(rootTable, feature):
+  rowsCount = rootTable.GetNumberOfRows()
+  colsCount = rootTable.GetNumberOfColumns()
+
+  points_data = [(0,0,0,0,0,0) for _ in range(max_person*max_record)]
+  
+  patient_count = 0
+  patient = {}
+  for i in range(rowsCount):
+    data =[0 for _ in range(colsCount)]
+    # patient_id, gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+    patient_id = 0
+    point_id = 0
+    for j in range(colsCount):
+        data[j] = rootTable.GetValue(i,j).ToFloat()
+    if data[0] not in patient:
+      patient[data[0]] = [patient_count, 0]
+      patient_id = patient_count
+      patient_count += 1
+      point_id = 0
+    else:
+      patient_id = patient[data[0]][0]
+      point_id = patient[data[0]][1] +1
+      patient[data[0]] = [patient_id, point_id]
+    
+    index = patient_id*max_record + point_id
+    points_data[index] = tuple(data[1:])
+  #print(len(patient))
+  points_array = np.array(points_data)
+  feature_array = np.array(feature)
+  point_coordinate = np.dot(points_array, feature).tolist()
+  return point_coordinate
+
+
+  
+    
+    
 
 
 
@@ -176,11 +229,8 @@ if __name__ == '__main__':
   reader.Update()
 
   rootTable = reader.GetOutput()
- 
-
-
-
-
+  feature = featureVector(rootTable)
+  point_xyz = pointCalculate(rootTable, feature)
 
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
@@ -197,7 +247,7 @@ if __name__ == '__main__':
   # points, pointsActor = getPointsActor()
   points = vtk.vtkPoints()
 
-  pointset = PointSet(points)
+  pointset = PointSet(points, feature, point_xyz)
   linesActor = getLinesActor()
 
   callback = pointCallBack(sliderRep1, sliderRep2, pointset,  max_record, max_person)
