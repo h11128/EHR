@@ -193,7 +193,9 @@ def featureVector(filename):
     features.append(list(pd_read.iloc[:,i+1]))
   rowsCount = len(features[0])
   colsCount = len(features)
- 
+  
+  
+  
   for i in range(num_feature-3):
     total_feature.append([0,0,0])
   # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
@@ -213,7 +215,8 @@ def pointCalculate(rootTable, feature):
   colsCount = rootTable.GetNumberOfColumns()
 
   points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
-  
+  print(points_data[0])
+
   patient_count = 0
   patient = {}
   for i in range(rowsCount):
@@ -238,7 +241,7 @@ def pointCalculate(rootTable, feature):
   #print(len(patient))
   points_array = np.array(points_data)
   feature_array = np.array(feature)
-  point_coordinate = np.dot(points_array, feature).tolist()
+  point_coordinate = np.dot(points_array, feature_array).tolist()
   return point_coordinate
 
 
