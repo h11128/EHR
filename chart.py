@@ -97,8 +97,10 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep.SetMaximumValue(maximum)
   if title == 'point size':
     sliderRep.SetValue(0.05)
-  else:
-    sliderRep.SetValue(0)
+  elif title == 'record':
+    sliderRep.SetValue(max_record)
+  elif title == 'person':
+    sliderRep.SetValue(max_person)
   sliderRep.SetTitleText(title)
 
   sliderRep.GetPoint1Coordinate().SetCoordinateSystemToDisplay()
