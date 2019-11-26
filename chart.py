@@ -357,6 +357,7 @@ if __name__ == '__main__':
   
   balloonRep = vtk.vtkBalloonRepresentation()
   balloonRep.SetBalloonLayoutToImageRight()
+  balloonRep.GetTextProperty().SetFontSize(50)
   balloonWidget = vtk.vtkBalloonWidget()
   balloonWidget.SetInteractor(renderWindowInteractor)
   balloonWidget.SetRepresentation(balloonRep)
