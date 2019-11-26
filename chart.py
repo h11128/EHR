@@ -230,7 +230,10 @@ def pointCalculate(rootTable, feature):
   patient = {}
   for i in range(rowsCount):
     data =[0 for _ in range(colsCount)]
-    # patient_id, gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+    # original feature: patient_id, gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+    # changed feature: 1st_sympton_duration, 2nd_symptom_duration, ......, 15th_symptom_duration
+    # symptom duration is calculated from (symptom_occurence_date - date_injury) and 
+    #   do normalization under the same scale for all patients
     patient_id = 0
     point_id = 0
     for j in range(colsCount):
