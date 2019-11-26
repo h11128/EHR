@@ -14,7 +14,7 @@ class PointSet():
   def __init__(self, person_id,  feature, points):
     self.sphereSource = vtk.vtkSphereSource()
     # sphereSource.SetCenter(0.0, 0.0, 0.0)
-    self.sphereSource.SetRadius(0.01)
+    self.sphereSource.SetRadius(0.05)
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
@@ -391,7 +391,8 @@ if __name__ == '__main__':
   for i in range(max_person):
     renderer.AddActor(actorList[i])
   renderer.AddActor(linesActor)
-  renderer.AddActor(trajactoryActor)
+  if len(sys.argv) == 3 and sys.argv[2] == 'track':
+    renderer.AddActor(trajactoryActor)
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
