@@ -285,6 +285,27 @@ def pointCalculate(rootTable, feature):
   return point_coordinate, all_middle_points, frequency_count
 
 
+def drawText(featurePoints):
+  textActorList = []
+  feature_text = "Stress	PTSD	Speech	Anxiety	Depression	Headache	Sleep	Audiology	Vision	Neurologic	\
+    Alzheimer	Cognitive	PCS	Endocrine	Skull_inj	NON_skull_inj"
+  
+  featureText = feature_text.split("	")
+  featureText = [i.strip(" ") for i in featureText]
+  print(featureText)
+  for i in range(len(featurePoints)):
+    atext = vtk.vtkVectorText()
+    atext.SetText(featureText[i])
+    textMapper = vtk.vtkPolyDataMapper()
+    textMapper.SetInputConnection(atext.GetOutputPort())
+
+    textActor = vtk.vtkFollower()
+    textActor.SetMapper(textMapper)
+    textActor.SetScale(0.05, 0.05, 0.05)
+    textActor.AddPosition(featurePoints[i])
+    textActorList.append(textActor)
+  return textActorList
+
 def drawtrajectory(points):
   linesPolyData = vtk.vtkPolyData()
   
@@ -416,6 +437,10 @@ if __name__ == '__main__':
   
   axes = vtk.vtkAxesActor()
 
+  textActorList = drawText(feature)
+  for i in range(len(feature)):
+    renderer.AddActor(textActorList[i])
+    textActorList[i].SetCamera( renderer.GetActiveCamera() )
   renderer.AddActor(featureActor)
   #renderer.AddActor(axes)
   for i in range(max_person):
