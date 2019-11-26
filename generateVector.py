@@ -8,7 +8,6 @@ from scipy.stats import pearsonr
 
 max_record = 1
 max_person = 41
-max_point_per_person = 15
 
 class PointSet():
   def __init__(self, person_id,  feature, points):
@@ -73,10 +72,10 @@ class pointCallBack(object):
         else:
           self.personlist[i].points.SetPoint(j, self.point_xyz[index])
 
-      self.personlist[i].graph = vtk.vtkPolyData()
+      # g = vtk.vtkPolyData()
       self.personlist[i].graph.SetPoints(self.personlist[i].points)
 
-      self.personlist[i].glyph3D = vtk.vtkGlyph3D()
+      # glyph3D = vtk.vtkGlyph3D()
       self.personlist[i].glyph3D.SetSourceConnection(self.personlist[i].sphereSource.GetOutputPort())
       self.personlist[i].glyph3D.SetInputData(self.personlist[i].graph)
       self.personlist[i].glyph3D.Update()
@@ -115,7 +114,7 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   return sliderRep, sliderWidget
 
 
-def getCoordinatesActor(feature):
+def getLinesActor(feature):
   linesPolyData = vtk.vtkPolyData()
 
   # Create three points
@@ -206,7 +205,6 @@ def featureVector(filename):
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
     vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
     total_feature[i+3] = vector
-  print(total_feature)
   return total_feature
   
 def pointCalculate(rootTable, feature):
@@ -223,10 +221,7 @@ def pointCalculate(rootTable, feature):
     patient_id = 0
     point_id = 0
     for j in range(colsCount):
-        
-      data[j] = rootTable.GetValue(i,j).ToFloat()
-      if data[j] < 0.0001:
-        data[j] = 0
+        data[j] = rootTable.GetValue(i,j).ToFloat()
     if data[0] not in patient:
       patient[data[0]] = [patient_count, 0]
       patient_id = patient_count
@@ -242,7 +237,6 @@ def pointCalculate(rootTable, feature):
     points_data[index] = data[1:]
 
     middle_points = []
-    
     for i in range(15):
       middle_point = [j * points_data[index][i] for j in feature[i]]
       middle_points.append(middle_point)
@@ -255,56 +249,7 @@ def pointCalculate(rootTable, feature):
   return point_coordinate, all_middle_points
 
 
-def drawtrajectory(points):
-  linesPolyData = vtk.vtkPolyData()
-
-  # Create three points
-  origin = [0.0, 0.0, 0.0]
-
-  # Create a vtkPoints container and store the points in it
-  pts = vtk.vtkPoints()
-  pts.InsertNextPoint(origin)
-  for personIdx in range(len(points)):
-    for pointIdx in range(len(points[personIdx])):
-      x, y, z = points[personIdx][pointIdx]
-      pts.InsertNextPoint([x, y, z])
   
-  linesPolyData.SetPoints(pts)
-  lines = vtk.vtkCellArray()
-  colors = vtk.vtkUnsignedCharArray()
-  colors.SetNumberOfComponents(3)
-  namedColors = vtk.vtkNamedColors()
-  for personIdx in range(max_person):
-
-    numPoint = len(points[personIdx])
-    prevPointIndex = 0
-    for pointIdx in range(numPoint):
-      # Create the first line (between Origin and P0)
-      curPointIndex = personIdx * max_point_per_person + pointIdx + 1
-      line0 = vtk.vtkLine()
-      line0.GetPointIds().SetId(0, prevPointIndex)  # the second 0 is the index of the Origin in linesPolyData's points
-      line0.GetPointIds().SetId(1, curPointIndex)
-      lines.InsertNextCell(line0)
-      try:
-          colors.InsertNextTupleValue(namedColors.GetColor3ub("red"))
-      except AttributeError:
-          # For compatibility with new VTK generic data arrays.
-          colors.InsertNextTypedTuple(namedColors.GetColor3ub("red"))
-      
-      # Update current point index
-      prevPointIndex = curPointIndex
-  # Add the lines to the polydata container
-  linesPolyData.SetLines(lines)
-  linesPolyData.GetCellData().SetScalars(colors)
-
-  # Setup the visualization pipeline
-  mapper = vtk.vtkPolyDataMapper()
-  mapper.SetInputData(linesPolyData)
-  actor = vtk.vtkActor()
-  actor.SetMapper(mapper)
-  actor.GetProperty().SetLineWidth(1)
-
-  return actor
     
     
 
@@ -347,12 +292,10 @@ if __name__ == '__main__':
   personlist = []
   for i in range(max_person):
     personlist.append(PointSet(i, feature, points))
-
-  linesActor = getCoordinatesActor(feature)
-  trajactoryActor = drawtrajectory(middle_points)
-
+  linesActor = getLinesActor(feature)
   actorList = []
   for i in range(max_person):
+
     actor = vtk.vtkActor()
     actor.SetMapper(personlist[i].mapper)
     actor.GetProperty().SetColor(0,1,0)
@@ -365,13 +308,12 @@ if __name__ == '__main__':
   sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
   
-  # axes = vtk.vtkAxesActor()
+  axes = vtk.vtkAxesActor()
 
   #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
   renderer.AddActor(linesActor)
-  renderer.AddActor(trajactoryActor)
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
