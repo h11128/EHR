@@ -74,29 +74,38 @@ injury_time = []
 frequency = []
 min_Date = 999999999
 max_Date = 0
+last_encounter = 0
 for i in range(0, m-1):
   duration = encounter_date[i] - encounter_date[0]
   injury_time.append(duration)
   current_id = table.cell(i+1, 0).value
   current_gender = gender[i]
   value = 0
+  
   for k in range(17, 34):
     if k != 17:
       value += table.cell(i+1, k).value
       sympton_value = table.cell(i+1, k).value
       current_occurence = second_data[current_id][k-17]
+      
       if int(sympton_value == 1):
-        occurence_duration = encounter_date[i] - date_injury[i]
+        if k == 18 or last_encounter == 0:
+          occurence_duration = encounter_date[i] - date_injury[i]
+          
+        else:
+          occurence_duration = encounter_date[i] - last_encounter
         # fill the occurence
-        if current_occurence == "k" or current_occurence <= occurence_duration:
+        if current_occurence == "k":
           
           second_data[current_id][k-17] = occurence_duration
+          last_encounter = encounter_date[i]
+          
           # occurence duration
           if min_Date> occurence_duration:
             min_Date = occurence_duration
-          if max_Date< occurence_duration:
+          if max_Date< occurence_duration and occurence_duration < 10000:
             max_Date = occurence_duration
-      
+
     else:
       save_gender = second_data[current_id][0]
       if save_gender != current_gender:
@@ -111,6 +120,7 @@ the_data = [patient_id, frequency, gender, age_group, encounter_date, pre_max_da
 
 
 duration_range = [min_Date, max_Date, max_Date - min_Date]
+
 for k in second_data:
   
   second_data[k] = normallize_sequence(second_data[k], duration_range)

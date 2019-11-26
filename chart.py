@@ -11,24 +11,31 @@ max_person = 41
 max_point_per_person = 15
 
 class PointSet():
-  def __init__(self, person_id,  feature, points):
+  def __init__(self, person_id,  feature, frequency_count):
     self.sphereSource = vtk.vtkSphereSource()
     # sphereSource.SetCenter(0.0, 0.0, 0.0)
     self.sphereSource.SetRadius(0.05)
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
+    self.frequency = frequency_count[person_id]
     
-    if person_id == -1:
+    if person_id < 0:
       num_points = len(feature)
+      self.feature = feature
+      
+      self.points.SetNumberOfPoints(num_points)
+      for i in range(num_points):
+        
+        self.points.SetPoint(i,feature[i])
+      self.sphereSource.SetRadius(0.03)
     else:
       num_points = max_record
-    self.points.SetNumberOfPoints(num_points)
-    
-    self.points.SetPoint(0,1,0,0)
+      self.points.SetNumberOfPoints(num_points)
+      self.points.SetPoint(0,0,0,0)
 
     self.graph = vtk.vtkPolyData()
-    self.graph.SetPoints(points)
+    self.graph.SetPoints(self.points)
 
     self.glyph3D = vtk.vtkGlyph3D()
     self.glyph3D.SetSourceConnection(self.sphereSource.GetOutputPort())
@@ -50,6 +57,7 @@ class pointCallBack(object):
     self.max_person = max_person
     self.point_xyz = point_xyz
     self.actorList = actorList
+    
     super().__init__()
 
   def __call__(self, caller, event):
@@ -85,7 +93,7 @@ class pointCallBack(object):
       self.personlist[i].mapper.Update()
       actor = actorList[i]
       actor.SetMapper(self.personlist[i].mapper)
-      actor.GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
+      actor.GetProperty().SetColor(self.personlist[i].frequency/(10),1 - self.personlist[i].frequency/(10),0)
       actor.Modified()
     # print("person: %d record: %d"% (person, record))
     # print(self.pointset.points.GetNumberOfPoints())
@@ -196,7 +204,6 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
   num_feature = len(list(pd_read.iloc[0,:]))-1
-  print(num_feature)
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
   features = []
   angle1 = random.random()*math.pi
@@ -222,11 +229,14 @@ def featureVector(filename):
 def pointCalculate(rootTable, feature):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
+  #print(rowsCount, colsCount)
   feature_array = np.array(feature)
   points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
+  #print(len(points_data))
   all_middle_points = []
   patient_count = 0
   patient = {}
+  frequency_count = [0 for _ in range(max_person*max_record)]
   for i in range(rowsCount):
     data =[0 for _ in range(colsCount)]
     # original feature: patient_id, gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
@@ -251,14 +261,17 @@ def pointCalculate(rootTable, feature):
       point_id = patient[data[0]][1] +1
       patient[data[0]] = [patient_id, point_id]
     
-    index = patient_id*max_record + point_id
-    
+    index = patient_id*max_record
+    #print(rowsCount)
+    #print(index)
     points_data[index] = data[1:]
 
     middle_points = []
     temp = [0,0,0]
-    for i in range(15):
-      middle_point = [j * points_data[index][i] for j in feature[i]]
+    for k in range(colsCount -1):
+      middle_point = [j * points_data[index][k] for j in feature[k]]
+      if points_data[index][k] != 0:
+        frequency_count[i] += 1
       temp = [sum(x) for x in zip(temp, middle_point)]
       middle_points.append(temp)
     all_middle_points.append(middle_points)
@@ -267,7 +280,9 @@ def pointCalculate(rootTable, feature):
   points_array = np.array(points_data)
   
   point_coordinate = np.dot(points_array, feature).tolist()
-  return point_coordinate, all_middle_points
+
+
+  return point_coordinate, all_middle_points, frequency_count
 
 
 def drawtrajectory(points):
@@ -344,12 +359,13 @@ if __name__ == '__main__':
 
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
-  point_xyz, middle_points = pointCalculate(rootTable, feature)
+  point_xyz, middle_points, frequency_count = pointCalculate(rootTable, feature)
+  #print(frequency_count)
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
   renderer.SetBackground(.1, .2, .3)
-
+  
   renderWindowInteractor = vtk.vtkRenderWindowInteractor()
   renderWindowInteractor.SetRenderWindow(renderWindow)
 
@@ -368,21 +384,30 @@ if __name__ == '__main__':
 
   # points, pointsActor = getPointsActor()
   points = vtk.vtkPoints()
+  
   personlist = []
   for i in range(max_person):
-    personlist.append(PointSet(i, feature, points))
+    personlist.append(PointSet(i, feature, frequency_count))
 
   linesActor = getCoordinatesActor(feature)
   trajactoryActor = drawtrajectory(middle_points)
+
+  faeturePoint = PointSet(-1, feature, frequency_count)
+  featureActor = vtk.vtkActor()
+  featureActor.SetMapper(faeturePoint.mapper)
+  featureActor.GetProperty().SetColor(0 ,0 ,0)
+  featureActor.Modified()
+  
+
 
   actorList = []
   for i in range(max_person):
     actor = vtk.vtkActor()
     actor.SetMapper(personlist[i].mapper)
-    actor.GetProperty().SetColor(0,1,0)
+    actor.GetProperty().SetColor(frequency_count[i]/(10),1 - frequency_count[i]/(10),0)
     actor.Modified()
     actorList.append(actor)
-    balloonWidget.AddBalloon(actor, 'Patient{}'.format(i))
+    balloonWidget.AddBalloon(actor, 'Patient{} \n Frequency{}'.format(i, frequency_count[i]))
 
   callback = pointCallBack(sliderRep1, sliderRep2, sliderRep3, personlist,  max_record, max_person, point_xyz, actorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
@@ -391,6 +416,7 @@ if __name__ == '__main__':
   
   axes = vtk.vtkAxesActor()
 
+  renderer.AddActor(featureActor)
   #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
