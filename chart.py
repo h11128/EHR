@@ -215,9 +215,8 @@ def featureVector(filename):
     rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 3)
+    vector = computeVector(i+3, rho_x, rho_y, rho_z, angle1, angle2, 3)
     total_feature[i+3] = vector
-  
   return total_feature
   
 def pointCalculate(rootTable, feature):
@@ -234,6 +233,7 @@ def pointCalculate(rootTable, feature):
     # changed feature: 1st_sympton_duration, 2nd_symptom_duration, ......, 15th_symptom_duration
     # symptom duration is calculated from (symptom_occurence_date - date_injury) and 
     #   do normalization under the same scale for all patients
+    # change the allocation of vector to be equally divide the space
     patient_id = 0
     point_id = 0
     for j in range(colsCount):
@@ -389,7 +389,7 @@ if __name__ == '__main__':
   sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
   
-  # axes = vtk.vtkAxesActor()
+  axes = vtk.vtkAxesActor()
 
   #renderer.AddActor(axes)
   for i in range(max_person):
