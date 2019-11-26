@@ -8,6 +8,7 @@ from scipy.stats import pearsonr
 
 max_record = 1
 max_person = 41
+max_point_per_person = 15
 
 class PointSet():
   def __init__(self, person_id,  feature, points):
@@ -258,19 +259,23 @@ def drawtrajectory(points):
   # Create a vtkPoints container and store the points in it
   pts = vtk.vtkPoints()
   pts.InsertNextPoint(origin)
+  for personIdx in range(len(points)):
+    for pointIdx in range(len(points[personIdx])):
+      x, y, z = points[personIdx][pointIdx]
+      pts.InsertNextPoint([x, y, z])
+  
   linesPolyData.SetPoints(pts)
   lines = vtk.vtkCellArray()
   colors = vtk.vtkUnsignedCharArray()
   colors.SetNumberOfComponents(3)
   namedColors = vtk.vtkNamedColors()
-  for i in range(max_person):
+  for personIdx in range(max_person):
 
-    numPoint
+    numPoint = len(points[personIdx])
     prevPointIndex = 0
-    for j in range(numPoint):
-    # pts.InsertNextPoint(feature[i])
+    for pointIdx in range(numPoint):
       # Create the first line (between Origin and P0)
-      curPointIndex = 
+      curPointIndex = personIdx * max_point_per_person + pointIdx + 1
       line0 = vtk.vtkLine()
       line0.GetPointIds().SetId(0, prevPointIndex)  # the second 0 is the index of the Origin in linesPolyData's points
       line0.GetPointIds().SetId(1, curPointIndex)
@@ -339,7 +344,7 @@ if __name__ == '__main__':
     personlist.append(PointSet(i, feature, points))
 
   linesActor = getCoordinatesActor(feature)
-  trajactoryActor = drawtrajectory(point_xyz)
+  trajactoryActor = drawtrajectory(middle_points)
 
   actorList = []
   for i in range(max_person):
