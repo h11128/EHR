@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-max_record = 500
+max_record = 1
 max_person = 41
 
 class PointSet():
@@ -154,49 +154,65 @@ def getCoordinatesActor(feature):
 
   return actor
   
-def computeVector(rho_x, rho_y, rho_z, angle1, angle2, mode):
+def normalizeVector(original_vector):
+  length = math.sqrt(sum([i*i for i in original_vector]))
+  final_vector = [i/length for i in original_vector]
+  return final_vector
+  
+def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
+  #angle mode
   if mode == 0:
     vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
+  #disimilarity mode, where similar vector will far from each other
   elif mode == 1:
     vector = [-rho_x, -rho_y, -rho_z]
+  #similarity mode, where similar vector will close to each other
   elif mode ==2:
     vector = [rho_x, rho_y, rho_z]
-  length = math.sqrt(sum([i*i for i in vector]))
-  final_vector = [i/length for i in vector]
+  #generative mode: where vector will equally divide the space in a generative manner
+  elif mode ==3:
+    base0 = [1,0,0]
+    base1 = [0,1,0]
+    base2 = [0,0,1]
+    
+    baseVector = [base0,base1,base2,[-1,0,0],[0,-1,0],[0,0,-1],[math.sqrt(1/2), math.sqrt(1/2), 0] ]
+    vector = []
+  
+  final_vector = normalizeVector(vector)
   return final_vector
 
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
-
+  num_feature = len(list(pd_read.iloc[0,:]))-1
+  
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
-  for i in range(5):
-    total_feature.append([0,0,0])
-  # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
   features = []
-  for i in range(8):
+  angle1 = random.random()*math.pi
+  angle2 = random.random()*math.pi
+  
+  for i in range(num_feature):
     features.append(list(pd_read.iloc[:,i+1]))
   rowsCount = len(features[0])
   colsCount = len(features)
-  
-  angle1 = random.random()*math.pi
-  angle2 = random.random()*math.pi
-  for i in range(5):
+  for i in range(num_feature-3):
+    total_feature.append([0,0,0])
+  # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+
     rho_x, _ = pearsonr(features[0], features[i])
     rho_y, _ = pearsonr(features[1], features[i])
     rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(rho_x, rho_y, rho_z, angle1, angle2, 0)
+    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
     total_feature[i+3] = vector
-
   return total_feature
   
 def pointCalculate(rootTable, feature):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
-
-  points_data = [(0,0,0,0,0,0,0,0) for _ in range(max_person*max_record)]
-  
+  feature_array = np.array(feature)
+  points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
+  all_middle_points = []
   patient_count = 0
   patient = {}
   for i in range(rowsCount):
@@ -217,12 +233,20 @@ def pointCalculate(rootTable, feature):
       patient[data[0]] = [patient_id, point_id]
     
     index = patient_id*max_record + point_id
+    
+    points_data[index] = data[1:]
+
+    middle_points = []
+    for i in range(15):
+      middle_point = [j * points_data[index][i] for j in feature[i]]
+      middle_points.append(middle_point)
+    all_middle_points.append(middle_points)
     points_data[index] = tuple(data[1:])
-  #print(len(patient))
+
   points_array = np.array(points_data)
-  feature_array = np.array(feature)
+  
   point_coordinate = np.dot(points_array, feature).tolist()
-  return point_coordinate
+  return point_coordinate, all_middle_points
 
 
 def drawtrajectory(points):
@@ -287,7 +311,7 @@ if __name__ == '__main__':
 
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
-  point_xyz = pointCalculate(rootTable, feature)
+  point_xyz, middle_points = pointCalculate(rootTable, feature)
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
