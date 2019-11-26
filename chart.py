@@ -206,7 +206,7 @@ def featureVector(filename):
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
     vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
     total_feature[i+3] = vector
-  print(total_feature)
+  
   return total_feature
   
 def pointCalculate(rootTable, feature):
@@ -262,12 +262,18 @@ def drawtrajectory(points):
   origin = [0.0, 0.0, 0.0]
 
   # Create a vtkPoints container and store the points in it
+  zeroPoint = list()
   pts = vtk.vtkPoints()
   pts.InsertNextPoint(origin)
+  tempid = 1
   for personIdx in range(len(points)):
     for pointIdx in range(len(points[personIdx])):
       x, y, z = points[personIdx][pointIdx]
       pts.InsertNextPoint([x, y, z])
+      if x == 0 and y == 0 and z == 0:
+        zeroPoint.append(tempid)
+      
+      tempid += 1
   
   linesPolyData.SetPoints(pts)
   lines = vtk.vtkCellArray()
@@ -281,6 +287,8 @@ def drawtrajectory(points):
     for pointIdx in range(numPoint):
       # Create the first line (between Origin and P0)
       curPointIndex = personIdx * max_point_per_person + pointIdx + 1
+      if curPointIndex in zeroPoint:
+        continue
       line0 = vtk.vtkLine()
       line0.GetPointIds().SetId(0, prevPointIndex)  # the second 0 is the index of the Origin in linesPolyData's points
       line0.GetPointIds().SetId(1, curPointIndex)
