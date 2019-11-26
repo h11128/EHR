@@ -205,7 +205,6 @@ def featureVector(filename):
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
     vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
     total_feature[i+3] = vector
-  print(total_feature)
   return total_feature
   
 def pointCalculate(rootTable, feature):
@@ -222,10 +221,7 @@ def pointCalculate(rootTable, feature):
     patient_id = 0
     point_id = 0
     for j in range(colsCount):
-        
-      data[j] = rootTable.GetValue(i,j).ToFloat()
-      if data[j] < 0.0001:
-        data[j] = 0
+        data[j] = rootTable.GetValue(i,j).ToFloat()
     if data[0] not in patient:
       patient[data[0]] = [patient_count, 0]
       patient_id = patient_count
@@ -241,7 +237,6 @@ def pointCalculate(rootTable, feature):
     points_data[index] = data[1:]
 
     middle_points = []
-    
     for i in range(15):
       middle_point = [j * points_data[index][i] for j in feature[i]]
       middle_points.append(middle_point)
