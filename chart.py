@@ -188,7 +188,7 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
     baseVector.append([-value, value, -value])
     baseVector.append([value, -value, -value])
     baseVector.append([-value, -value, -value])
-    vector = baseVector
+    vector = baseVector[vector_number]
   
   final_vector = normalizeVector(vector)
   return final_vector
@@ -215,7 +215,7 @@ def featureVector(filename):
     rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 2)
+    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 3)
     total_feature[i+3] = vector
   
   return total_feature
