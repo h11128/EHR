@@ -201,20 +201,18 @@ def featureVector(filename):
     rho_x, _ = pearsonr(features[0], features[i])
     rho_y, _ = pearsonr(features[1], features[i])
     rho_z, _ = pearsonr(features[2], features[i])
-    print(rho_x, rho_y, rho_z)
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
     vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
     total_feature[i+3] = vector
-
   return total_feature
   
 def pointCalculate(rootTable, feature):
   rowsCount = rootTable.GetNumberOfRows()
   colsCount = rootTable.GetNumberOfColumns()
-
+  feature_array = np.array(feature)
   points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
-  
+  all_middle_points = []
   patient_count = 0
   patient = {}
   for i in range(rowsCount):
@@ -235,14 +233,20 @@ def pointCalculate(rootTable, feature):
       patient[data[0]] = [patient_id, point_id]
     
     index = patient_id*max_record + point_id
+    
+    points_data[index] = data[1:]
+
+    middle_points = []
+    for i in range(15):
+      middle_point = [j * points_data[index][i] for j in feature[i]]
+      middle_points.append(middle_point)
+    all_middle_points.append(middle_points)
     points_data[index] = tuple(data[1:])
-  #print(points_data)
-  #print(len(patient))
+
   points_array = np.array(points_data)
-  feature_array = np.array(feature)
-  print(points_array)
+  
   point_coordinate = np.dot(points_array, feature).tolist()
-  return point_coordinate
+  return point_coordinate, all_middle_points
 
 
   
@@ -262,7 +266,7 @@ if __name__ == '__main__':
 
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
-  point_xyz = pointCalculate(rootTable, feature)
+  point_xyz, middle_points = pointCalculate(rootTable, feature)
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
   renderWindow.AddRenderer(renderer)
