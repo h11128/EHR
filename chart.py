@@ -18,7 +18,7 @@ class PointSet():
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
-    self.frequency = frequency_count[person_id]
+    self.frequency = frequency_count[person_id][-1]
     
     if person_id < 0:
       num_points = len(feature)
@@ -236,7 +236,7 @@ def pointCalculate(rootTable, feature):
   all_middle_points = []
   patient_count = 0
   patient = {}
-  frequency_count = [0 for _ in range(max_person*max_record)]
+  frequency_count = [[0 for _ in range(len(feature)+1)] for _ in range(max_person*max_record)]
   for i in range(rowsCount):
     data =[0 for _ in range(colsCount)]
     # original feature: patient_id, gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
@@ -271,9 +271,10 @@ def pointCalculate(rootTable, feature):
     for k in range(colsCount -1):
       middle_point = [j * points_data[index][k] for j in feature[k]]
       if points_data[index][k] != 0:
-        frequency_count[i] += 1
+        frequency_count[i][k] += 1
       temp = [sum(x) for x in zip(temp, middle_point)]
       middle_points.append(temp)
+    frequency_count[i][-1] = sum(frequency_count[i])
     all_middle_points.append(middle_points)
     points_data[index] = tuple(data[1:])
 
@@ -285,13 +286,9 @@ def pointCalculate(rootTable, feature):
   return point_coordinate, all_middle_points, frequency_count
 
 
-def drawText(featurePoints):
+def drawText(featurePoints, featureText):
   textActorList = []
-  feature_text = "Stress	PTSD	Speech	Anxiety	Depression	Headache	Sleep	Audiology	Vision	Neurologic	\
-    Alzheimer	Cognitive	PCS	Endocrine	Skull_inj	NON_skull_inj"
-  
-  featureText = feature_text.split("	")
-  featureText = [i.strip(" ") for i in featureText]
+
   print(featureText)
   for i in range(len(featurePoints)):
     atext = vtk.vtkVectorText()
@@ -390,14 +387,18 @@ if __name__ == '__main__':
   renderWindowInteractor = vtk.vtkRenderWindowInteractor()
   renderWindowInteractor.SetRenderWindow(renderWindow)
 
-  
+  feature_text = "Stress	PTSD	Speech	Anxiety	Depression	Headache	Sleep	Audiology	Vision	Neurologic	\
+    Alzheimer	Cognitive	PCS	Endocrine	Skull_inj	NON_skull_inj"
+  featureText = feature_text.split("	")
+  featureText = [i.strip(" ") for i in featureText]
+
   sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 540, renderWindowInteractor, "record")
   sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
   sliderRep3, sliderWidget3 = slider(renderer, 0.1, 40, 140, renderWindowInteractor, "point size")
   
   balloonRep = vtk.vtkBalloonRepresentation()
   balloonRep.SetBalloonLayoutToImageRight()
-  balloonRep.GetTextProperty().SetFontSize(50)
+  balloonRep.GetTextProperty().SetFontSize(15)
   balloonWidget = vtk.vtkBalloonWidget()
   balloonWidget.SetInteractor(renderWindowInteractor)
   balloonWidget.SetRepresentation(balloonRep)
@@ -425,10 +426,14 @@ if __name__ == '__main__':
   for i in range(max_person):
     actor = vtk.vtkActor()
     actor.SetMapper(personlist[i].mapper)
-    actor.GetProperty().SetColor(frequency_count[i]/(10),1 - frequency_count[i]/(10),0)
+    actor.GetProperty().SetColor(frequency_count[i][-1]/(10),1 - frequency_count[i][-1]/(10),0)
     actor.Modified()
     actorList.append(actor)
-    balloonWidget.AddBalloon(actor, 'Patient{} \n Frequency{}'.format(i, frequency_count[i]))
+    ballonText = 'Patient{}'.format(i)
+    for k in range(len(frequency_count[i]) -1 ):
+      if frequency_count[i][k] != 0:
+        ballonText += "\nFrequency {} ".format(featureText[k])
+    balloonWidget.AddBalloon(actor, ballonText)
 
   callback = pointCallBack(sliderRep1, sliderRep2, sliderRep3, personlist,  max_record, max_person, point_xyz, actorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
@@ -437,7 +442,7 @@ if __name__ == '__main__':
   
   axes = vtk.vtkAxesActor()
 
-  textActorList = drawText(feature)
+  textActorList = drawText(feature, featureText)
   for i in range(len(feature)):
     renderer.AddActor(textActorList[i])
     textActorList[i].SetCamera( renderer.GetActiveCamera() )
