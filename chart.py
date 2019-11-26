@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-max_record = 500
+max_record = 1
 max_person = 41
 
 class PointSet():
@@ -184,6 +184,7 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
   num_feature = len(list(pd_read.iloc[0,:]))-1
+  
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
   features = []
   angle1 = random.random()*math.pi
@@ -193,7 +194,6 @@ def featureVector(filename):
     features.append(list(pd_read.iloc[:,i+1]))
   rowsCount = len(features[0])
   colsCount = len(features)
- 
   for i in range(num_feature-3):
     total_feature.append([0,0,0])
   # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
@@ -201,6 +201,7 @@ def featureVector(filename):
     rho_x, _ = pearsonr(features[0], features[i])
     rho_y, _ = pearsonr(features[1], features[i])
     rho_z, _ = pearsonr(features[2], features[i])
+    print(rho_x, rho_y, rho_z)
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
     vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
@@ -235,9 +236,11 @@ def pointCalculate(rootTable, feature):
     
     index = patient_id*max_record + point_id
     points_data[index] = tuple(data[1:])
+  #print(points_data)
   #print(len(patient))
   points_array = np.array(points_data)
   feature_array = np.array(feature)
+  print(points_array)
   point_coordinate = np.dot(points_array, feature).tolist()
   return point_coordinate
 
