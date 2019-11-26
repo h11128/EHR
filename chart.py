@@ -177,9 +177,18 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
     base0 = [1,0,0]
     base1 = [0,1,0]
     base2 = [0,0,1]
-    
-    baseVector = [base0,base1,base2,[-1,0,0],[0,-1,0],[0,0,-1],[math.sqrt(1/2), math.sqrt(1/2), 0] ]
-    vector = []
+
+    baseVector = [base0,base1,base2,[-1,0,0],[0,-1,0],[0,0,-1],[1,0,0]]
+    value = 1/math.sqrt(3)
+    baseVector.append([value, value, value])
+    baseVector.append([-value, value, value])
+    baseVector.append([value, -value, value])
+    baseVector.append([value, value, -value])
+    baseVector.append([-value, -value, value])
+    baseVector.append([-value, value, -value])
+    baseVector.append([value, -value, -value])
+    baseVector.append([-value, -value, -value])
+    vector = baseVector
   
   final_vector = normalizeVector(vector)
   return final_vector
@@ -187,7 +196,7 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
   num_feature = len(list(pd_read.iloc[0,:]))-1
-  
+  print(num_feature)
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
   features = []
   angle1 = random.random()*math.pi
@@ -206,7 +215,7 @@ def featureVector(filename):
     rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 1)
+    vector = computeVector(i, rho_x, rho_y, rho_z, angle1, angle2, 2)
     total_feature[i+3] = vector
   
   return total_feature
