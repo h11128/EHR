@@ -242,10 +242,11 @@ def pointCalculate(rootTable, feature):
     points_data[index] = data[1:]
 
     middle_points = []
-    
+    temp = [0,0,0]
     for i in range(15):
       middle_point = [j * points_data[index][i] for j in feature[i]]
-      middle_points.append(middle_point)
+      temp = [sum(x) for x in zip(temp, middle_point)]
+      middle_points.append(temp)
     all_middle_points.append(middle_points)
     points_data[index] = tuple(data[1:])
 
@@ -257,7 +258,7 @@ def pointCalculate(rootTable, feature):
 
 def drawtrajectory(points):
   linesPolyData = vtk.vtkPolyData()
-
+  
   # Create three points
   origin = [0.0, 0.0, 0.0]
 
