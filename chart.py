@@ -18,9 +18,10 @@ class PointSet():
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
-    self.frequency = frequency_count[person_id][-1]
+    if person_id >= -1:
+      self.frequency = frequency_count[person_id][-1]
     
-    if person_id < 0:
+    if person_id == -1:
       num_points = len(feature)
       self.feature = feature
       
@@ -29,9 +30,10 @@ class PointSet():
         
         self.points.SetPoint(i,feature[i])
       self.sphereSource.SetRadius(radius)
-      # self.points.SetNumberOfPoints(max_point_per_person - 1)
-      # for i in range(max_point_per_person - 1):
-      #   self.points.SetPoint(i,0,0,0)
+    elif person_id < -1:
+      self.points.SetNumberOfPoints(max_point_per_person - 1)
+      for i in range(max_point_per_person - 1):
+        self.points.SetPoint(i,0,0,0)
     else:
       self.points.SetNumberOfPoints(max_record)
       self.points.SetPoint(0,point_xyz[person_id])
@@ -434,7 +436,7 @@ if __name__ == '__main__':
   person_middle_list = []
   for i in range(max_person):
     personlist.append(PointSet(i, feature, frequency_count, 0.05) )
-    person_middle_list.append(PointSet(-i-1, [0 for _ in range(max_point_per_person - 1)], frequency_count, 0.05))
+    person_middle_list.append(PointSet(-i-2, [0 for _ in range(max_point_per_person - 1)], frequency_count, 0.05))
 
   linesActor = getCoordinatesActor(feature)
   trajactoryActor = drawtrajectory(middle_points)
