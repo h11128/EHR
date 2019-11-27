@@ -11,24 +11,27 @@ max_person = 41
 max_point_per_person = 15
 
 class PointSet():
-  def __init__(self, person_id,  feature, points):
+  def __init__(self, person_id,  feature, point_xyz):
     self.sphereSource = vtk.vtkSphereSource()
     # sphereSource.SetCenter(0.0, 0.0, 0.0)
-    self.sphereSource.SetRadius(0.05)
+    if person_id < 0:
+      self.sphereSource.SetRadius(0.025)
+    else:
+      self.sphereSource.SetRadius(0.05)
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
     
-    if person_id == -1:
-      num_points = len(feature)
+    if person_id < 0:
+      self.points.SetNumberOfPoints(max_point_per_person - 1)
+      for i in range(max_point_per_person - 1):
+        self.points.SetPoint(i,0,0,0)
     else:
-      num_points = max_record
-    self.points.SetNumberOfPoints(num_points)
-    
-    self.points.SetPoint(0,1,0,0)
+      self.points.SetNumberOfPoints(max_record)
+      self.points.SetPoint(0,point_xyz[person_id])
 
     self.graph = vtk.vtkPolyData()
-    self.graph.SetPoints(points)
+    self.graph.SetPoints(self.points)
 
     self.glyph3D = vtk.vtkGlyph3D()
     self.glyph3D.SetSourceConnection(self.sphereSource.GetOutputPort())
@@ -41,15 +44,17 @@ class PointSet():
 
 
 class pointCallBack(object):
-  def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, max_record, max_person, point_xyz, actorList):
+  def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, person_middle_list,
+                point_xyz, middle_points, actorList, middlePointsActorList):
     self.sliderRep = sliderRep
     self.sliderRep2 = sliderRep2
     self.sliderRep3 = sliderRep3
     self.personlist = personlist
-    self.max_record = max_record
-    self.max_person = max_person
+    self.person_middle_list = person_middle_list
     self.point_xyz = point_xyz
+    self.middle_points = middle_points
     self.actorList = actorList
+    self.middlePointsActorList = middlePointsActorList
     super().__init__()
 
   def __call__(self, caller, event):
@@ -65,30 +70,50 @@ class pointCallBack(object):
 
       for j in range(max_record):
         index = (i)*max_record + j
-        #print(i, j, index)
         if (person ==0 or record ==0):
           self.personlist[i].points.SetPoint(0,0,0,0)
         elif (i>person or j >record):
-          self.personlist[i].points.SetPoint(0, 0,0,0)
+          self.personlist[i].points.SetPoint(0,0,0,0)
         else:
           self.personlist[i].points.SetPoint(j, self.point_xyz[index])
 
       self.personlist[i].graph = vtk.vtkPolyData()
       self.personlist[i].graph.SetPoints(self.personlist[i].points)
-
       self.personlist[i].glyph3D = vtk.vtkGlyph3D()
       self.personlist[i].glyph3D.SetSourceConnection(self.personlist[i].sphereSource.GetOutputPort())
       self.personlist[i].glyph3D.SetInputData(self.personlist[i].graph)
       self.personlist[i].glyph3D.Update()
-
       self.personlist[i].mapper.SetInputConnection(self.personlist[i].glyph3D.GetOutputPort())
       self.personlist[i].mapper.Update()
-      actor = actorList[i]
-      actor.SetMapper(self.personlist[i].mapper)
-      actor.GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
-      actor.Modified()
-    # print("person: %d record: %d"% (person, record))
-    # print(self.pointset.points.GetNumberOfPoints())
+      self.actorList[i].SetMapper(self.personlist[i].mapper)
+      self.actorList[i].GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
+      self.actorList[i].Modified()
+
+      # Handle middle points
+      self.person_middle_list[i].sphereSource = vtk.vtkSphereSource()
+      self.person_middle_list[i].sphereSource.SetRadius(pointSize * 0.5)
+
+      tmp_len = len(self.middle_points[i])
+      # The last point is not middle point, so don't show it
+      for j in range(tmp_len - 1):
+        x, y, z = self.middle_points[i][j]
+        if person == 0 or i > person:
+          self.person_middle_list[i].points.SetPoint(j, 0, 0, 0)
+        else:
+          self.person_middle_list[i].points.SetPoint(j, x, y, z)
+          
+
+      self.person_middle_list[i].graph = vtk.vtkPolyData()
+      self.person_middle_list[i].graph.SetPoints(self.person_middle_list[i].points)
+      self.person_middle_list[i].glyph3D = vtk.vtkGlyph3D()
+      self.person_middle_list[i].glyph3D.SetSourceConnection(self.person_middle_list[i].sphereSource.GetOutputPort())
+      self.person_middle_list[i].glyph3D.SetInputData(self.person_middle_list[i].graph)
+      self.person_middle_list[i].glyph3D.Update()
+      self.person_middle_list[i].mapper.SetInputConnection(self.person_middle_list[i].glyph3D.GetOutputPort())
+      self.person_middle_list[i].mapper.Update()
+      self.middlePointsActorList[i].SetMapper(self.person_middle_list[i].mapper)
+      self.middlePointsActorList[i].GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
+      self.middlePointsActorList[i].Modified()
 
 def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep = vtk.vtkSliderRepresentation2D()
@@ -196,7 +221,6 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
 def featureVector(filename):
   pd_read = pd.read_csv(filename)
   num_feature = len(list(pd_read.iloc[0,:]))-1
-  print(num_feature)
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
   features = []
   angle1 = random.random()*math.pi
@@ -365,12 +389,11 @@ if __name__ == '__main__':
   balloonWidget.SetInteractor(renderWindowInteractor)
   balloonWidget.SetRepresentation(balloonRep)
 
-
-  # points, pointsActor = getPointsActor()
-  points = vtk.vtkPoints()
   personlist = []
+  person_middle_list = []
   for i in range(max_person):
-    personlist.append(PointSet(i, feature, points))
+    personlist.append(PointSet(i, feature, point_xyz))
+    person_middle_list.append(PointSet(-i-1, [0 for _ in range(max_point_per_person - 1)], point_xyz))
 
   linesActor = getCoordinatesActor(feature)
   trajactoryActor = drawtrajectory(middle_points)
@@ -384,7 +407,23 @@ if __name__ == '__main__':
     actorList.append(actor)
     balloonWidget.AddBalloon(actor, 'Patient{}'.format(i))
 
-  callback = pointCallBack(sliderRep1, sliderRep2, sliderRep3, personlist,  max_record, max_person, point_xyz, actorList)
+  middlePointsActorList = []
+  for i in range(max_person):
+    actor = vtk.vtkActor()
+    actor.SetMapper(person_middle_list[i].mapper)
+    actor.GetProperty().SetColor(0,1,0)
+    actor.Modified()
+    middlePointsActorList.append(actor)
+
+  callback = pointCallBack(sliderRep1, 
+                           sliderRep2, 
+                           sliderRep3, 
+                           personlist,  
+                           person_middle_list,
+                           point_xyz, 
+                           middle_points,
+                           actorList,
+                           middlePointsActorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
   sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
@@ -394,6 +433,8 @@ if __name__ == '__main__':
   #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
+    renderer.AddActor(middlePointsActorList[i])
+  
   renderer.AddActor(linesActor)
   if len(sys.argv) == 3 and sys.argv[2] == 'track':
     renderer.AddActor(trajactoryActor)
