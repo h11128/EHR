@@ -11,10 +11,10 @@ max_person = 41
 max_point_per_person = 15
 
 class PointSet():
-  def __init__(self, person_id,  feature, frequency_count):
+  def __init__(self, person_id,  feature, frequency_count, radius):
     self.sphereSource = vtk.vtkSphereSource()
     # sphereSource.SetCenter(0.0, 0.0, 0.0)
-    self.sphereSource.SetRadius(0.05)
+    self.sphereSource.SetRadius(radius)
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
@@ -28,7 +28,7 @@ class PointSet():
       for i in range(num_points):
         
         self.points.SetPoint(i,feature[i])
-      self.sphereSource.SetRadius(0.03)
+      self.sphereSource.SetRadius(radius)
     else:
       num_points = max_record
       self.points.SetNumberOfPoints(num_points)
@@ -93,7 +93,10 @@ class pointCallBack(object):
       self.personlist[i].mapper.Update()
       actor = actorList[i]
       actor.SetMapper(self.personlist[i].mapper)
-      actor.GetProperty().SetColor(self.personlist[i].frequency/(10),1 - self.personlist[i].frequency/(10),0)
+      actor.GetProperty().SetEdgeColor(self.personlist[i].frequency/(10),1 - self.personlist[i].frequency/(10),0)
+      actor.GetProperty().EdgeVisibilityOn()
+      actor.GetProperty().SetColor(1,1,1)
+      
       actor.Modified()
     # print("person: %d record: %d"% (person, record))
     # print(self.pointset.points.GetNumberOfPoints())
@@ -185,13 +188,14 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
     base0 = [1,0,0]
     base1 = [0,1,0]
     base2 = [0,0,1]
-
-    baseVector = [base0,base1,base2,[-1,0,0],[0,-1,0],[0,0,-1],[1,0,0]]
+    
+    baseVector = [base0,base1,base2,[-1,0,0],[0,-1,0],[0,0,-1]]
     value = 1/math.sqrt(3)
     baseVector.append([value, value, value])
     baseVector.append([-value, value, value])
     baseVector.append([value, -value, value])
     baseVector.append([value, value, -value])
+    baseVector.append([1, 1, 0])
     baseVector.append([-value, -value, value])
     baseVector.append([-value, value, -value])
     baseVector.append([value, -value, -value])
@@ -231,6 +235,7 @@ def pointCalculate(rootTable, feature):
   colsCount = rootTable.GetNumberOfColumns()
   #print(rowsCount, colsCount)
   feature_array = np.array(feature)
+  # delete feature stress since not useful, not need first column person_id
   points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
   #print(len(points_data))
   all_middle_points = []
@@ -289,7 +294,9 @@ def pointCalculate(rootTable, feature):
 def drawText(featurePoints, featureText):
   textActorList = []
 
-  print(featureText)
+  #print(len(featureText))
+  #print(featurePoints)
+  #print(len(featurePoints))
   for i in range(len(featurePoints)):
     atext = vtk.vtkVectorText()
     atext.SetText(featureText[i])
@@ -387,7 +394,7 @@ if __name__ == '__main__':
   renderWindowInteractor = vtk.vtkRenderWindowInteractor()
   renderWindowInteractor.SetRenderWindow(renderWindow)
 
-  feature_text = "Stress	PTSD	Speech	Anxiety	Depression	Headache	Sleep	Audiology	Vision	Neurologic	\
+  feature_text = "PTSD	Speech	Anxiety	Depression	Headache	Sleep	Audiology	Vision	Neurologic	\
     Alzheimer	Cognitive	PCS	Endocrine	Skull_inj	NON_skull_inj"
   featureText = feature_text.split("	")
   featureText = [i.strip(" ") for i in featureText]
@@ -409,24 +416,35 @@ if __name__ == '__main__':
   
   personlist = []
   for i in range(max_person):
-    personlist.append(PointSet(i, feature, frequency_count))
+    personlist.append(PointSet(i, feature, frequency_count, 0.05) )
 
   linesActor = getCoordinatesActor(feature)
   trajactoryActor = drawtrajectory(middle_points)
 
-  faeturePoint = PointSet(-1, feature, frequency_count)
+  faeturePoint = PointSet(-1, feature, frequency_count, 0.03)
   featureActor = vtk.vtkActor()
   featureActor.SetMapper(faeturePoint.mapper)
   featureActor.GetProperty().SetColor(0 ,0 ,0)
   featureActor.Modified()
   
-
+  BigSphereFeature =[[0,0,0]]
+  BigSphere = PointSet(-1, BigSphereFeature, frequency_count, 1)
+  BigSphereActor = vtk.vtkActor()
+  BigSphereActor.SetMapper(BigSphere.mapper)
+  BigSphereActor.GetProperty().SetColor(1 ,1 ,1)
+  BigSphereActor.GetProperty().SetEdgeColor(1,1,1)
+  BigSphereActor.GetProperty().EdgeVisibilityOn()
+  BigSphereActor.GetProperty().SetOpacity(0.05)
+  BigSphereActor.Modified()
+  
 
   actorList = []
   for i in range(max_person):
     actor = vtk.vtkActor()
     actor.SetMapper(personlist[i].mapper)
-    actor.GetProperty().SetColor(frequency_count[i][-1]/(10),1 - frequency_count[i][-1]/(10),0)
+    actor.GetProperty().SetEdgeColor(frequency_count[i][-1]/(10),1 - frequency_count[i][-1]/(10),0)
+    actor.GetProperty().EdgeVisibilityOn()
+    actor.GetProperty().SetColor(1,1,1)
     actor.Modified()
     actorList.append(actor)
     ballonText = 'Patient{}'.format(i)
@@ -446,6 +464,8 @@ if __name__ == '__main__':
   for i in range(len(feature)):
     renderer.AddActor(textActorList[i])
     textActorList[i].SetCamera( renderer.GetActiveCamera() )
+
+  renderer.AddActor(BigSphereActor)
   renderer.AddActor(featureActor)
   #renderer.AddActor(axes)
   for i in range(max_person):
