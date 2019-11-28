@@ -18,6 +18,7 @@ class PointSet():
     self.person_id = person_id
     self.points = vtk.vtkPoints()
     self.points.SetDataTypeToFloat()
+    self.frequency_count = frequency_count
     if person_id >= -1:
       self.frequency = frequency_count[person_id][-1]
     
@@ -53,7 +54,7 @@ class PointSet():
 
 class pointCallBack(object):
   def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, person_middle_list,
-                point_xyz, middle_points, actorList, middlePointsActorList):
+                point_xyz, middle_points, actorList, middlePointsActorList, tActor):
     self.sliderRep = sliderRep
     self.sliderRep2 = sliderRep2
     self.sliderRep3 = sliderRep3
@@ -63,6 +64,7 @@ class pointCallBack(object):
     self.middle_points = middle_points
     self.actorList = actorList
     self.middlePointsActorList = middlePointsActorList
+    self.tActor = tActor
     super().__init__()
 
   def __call__(self, caller, event):
@@ -70,7 +72,15 @@ class pointCallBack(object):
     person = int(self.sliderRep2.GetValue())
     record = int(self.sliderRep.GetValue())
     pointSize = float(self.sliderRep3.GetValue())
-
+    _, self.tActor[1] = drawtrajectory(person, self.middle_points, self.personlist[0].frequency_count)
+    print("KKK", self.tActor[1].GetLines().GetSize())
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputData(self.tActor[1])
+    mapper.Update()
+    self.tActor[0] = vtk.vtkActor()
+    self.tActor[0].SetMapper(mapper)
+    self.tActor[0].GetProperty().SetLineWidth(2)
+    self.tActor[0].Modified()
     for i in range(max_person):
       self.personlist[i].sphereSource = vtk.vtkSphereSource()
       # # sphereSource.SetCenter(0.0, 0.0, 0.0)
@@ -84,17 +94,21 @@ class pointCallBack(object):
           self.personlist[i].points.SetPoint(0,0,0,0)
         else:
           self.personlist[i].points.SetPoint(j, self.point_xyz[index])
-
+      
       self.personlist[i].graph = vtk.vtkPolyData()
       self.personlist[i].graph.SetPoints(self.personlist[i].points)
       self.personlist[i].glyph3D = vtk.vtkGlyph3D()
       self.personlist[i].glyph3D.SetSourceConnection(self.personlist[i].sphereSource.GetOutputPort())
       self.personlist[i].glyph3D.SetInputData(self.personlist[i].graph)
       self.personlist[i].glyph3D.Update()
+      
       self.personlist[i].mapper.SetInputConnection(self.personlist[i].glyph3D.GetOutputPort())
       self.personlist[i].mapper.Update()
       self.actorList[i].SetMapper(self.personlist[i].mapper)
-      self.actorList[i].GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
+      self.actorList[i].GetProperty().SetColor(1, 1, 1)
+      self.actorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
+        1 - self.personlist[i].frequency_count[i][-1]/(10),0)
+      self.actorList[i].GetProperty().EdgeVisibilityOn()
       self.actorList[i].Modified()
 
       # Handle middle points
@@ -120,7 +134,10 @@ class pointCallBack(object):
       self.person_middle_list[i].mapper.SetInputConnection(self.person_middle_list[i].glyph3D.GetOutputPort())
       self.person_middle_list[i].mapper.Update()
       self.middlePointsActorList[i].SetMapper(self.person_middle_list[i].mapper)
-      self.middlePointsActorList[i].GetProperty().SetColor(1-i/(person+1),i/(person+1),0)
+      self.middlePointsActorList[i].GetProperty().SetColor(1, 1, 1)
+      self.middlePointsActorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
+        1 - self.personlist[i].frequency_count[i][-1]/(10),0)
+      self.middlePointsActorList[i].GetProperty().EdgeVisibilityOn()
       self.middlePointsActorList[i].Modified()
 
 def slider(renderer, maximum, x, y, renderWindowInteractor, title):
@@ -332,7 +349,7 @@ def drawText(featurePoints, featureText):
     textActorList.append(textActor)
   return textActorList
 
-def drawtrajectory(points):
+def drawtrajectory(num_of_person, points, frequency_count):
   linesPolyData = vtk.vtkPolyData()
   
   # Create three points
@@ -343,6 +360,7 @@ def drawtrajectory(points):
   pts = vtk.vtkPoints()
   pts.InsertNextPoint(origin)
   tempid = 1
+  
   for personIdx in range(len(points)):
     for pointIdx in range(len(points[personIdx])):
       x, y, z = points[personIdx][pointIdx]
@@ -354,42 +372,45 @@ def drawtrajectory(points):
   
   linesPolyData.SetPoints(pts)
   lines = vtk.vtkCellArray()
+  lines.Initialize()
   colors = vtk.vtkUnsignedCharArray()
   colors.SetNumberOfComponents(3)
   namedColors = vtk.vtkNamedColors()
-  for personIdx in range(max_person):
+  for personIdx in range(num_of_person):
 
     numPoint = len(points[personIdx])
     prevPointIndex = 0
     for pointIdx in range(numPoint):
       # Create the first line (between Origin and P0)
-      curPointIndex = personIdx * max_point_per_person + pointIdx + 1
+      curPointIndex = personIdx * numPoint + pointIdx + 1
       if curPointIndex in zeroPoint:
         continue
       line0 = vtk.vtkLine()
       line0.GetPointIds().SetId(0, prevPointIndex)  # the second 0 is the index of the Origin in linesPolyData's points
       line0.GetPointIds().SetId(1, curPointIndex)
       lines.InsertNextCell(line0)
+      colorTuple = [int(frequency_count[personIdx][-1]*255/(10)), int(255 - frequency_count[personIdx][-1]*255/(10)), 0]
+
       try:
-          colors.InsertNextTupleValue(namedColors.GetColor3ub("red"))
+          colors.InsertNextTupleValue(colorTuple)
       except AttributeError:
           # For compatibility with new VTK generic data arrays.
-          colors.InsertNextTypedTuple(namedColors.GetColor3ub("red"))
+          colors.InsertNextTypedTuple(colorTuple)
       
       # Update current point index
       prevPointIndex = curPointIndex
   # Add the lines to the polydata container
   linesPolyData.SetLines(lines)
   linesPolyData.GetCellData().SetScalars(colors)
-
+  print(len(zeroPoint) , 15* len(points) - len(zeroPoint) , lines.GetSize ())
   # Setup the visualization pipeline
   mapper = vtk.vtkPolyDataMapper()
   mapper.SetInputData(linesPolyData)
   actor = vtk.vtkActor()
   actor.SetMapper(mapper)
-  actor.GetProperty().SetLineWidth(1)
+  actor.GetProperty().SetLineWidth(2)
 
-  return actor
+  return actor, linesPolyData
     
     
 
@@ -439,8 +460,17 @@ if __name__ == '__main__':
     person_middle_list.append(PointSet(-i-2, [0 for _ in range(max_point_per_person - 1)], frequency_count, 0.05))
 
   linesActor = getCoordinatesActor(feature)
-  trajactoryActor = drawtrajectory(middle_points)
-
+  trajactoryActor, linesPolyData = drawtrajectory(41, middle_points, frequency_count)
+  tActor = [trajactoryActor, linesPolyData]
+  mapper = vtk.vtkPolyDataMapper()
+  mapper.SetInputData(tActor[1])
+  mapper.Update()
+  tActor[0] = vtk.vtkActor()
+  tActor[0].SetMapper(mapper)
+  tActor[0].GetProperty().SetLineWidth(2)
+  tActor[0].Modified()
+  
+  
   faeturePoint = PointSet(-1, feature, frequency_count, 0.03)
   featureActor = vtk.vtkActor()
   featureActor.SetMapper(faeturePoint.mapper)
@@ -480,7 +510,8 @@ if __name__ == '__main__':
     actor.GetProperty().SetColor(0,1,0)
     actor.Modified()
     middlePointsActorList.append(actor)
-
+  if len(sys.argv) == 3 and sys.argv[2] == 'track':
+    renderer.AddActor(tActor[0])
   callback = pointCallBack(sliderRep1, 
                            sliderRep2, 
                            sliderRep3, 
@@ -489,7 +520,8 @@ if __name__ == '__main__':
                            point_xyz, 
                            middle_points,
                            actorList,
-                           middlePointsActorList)
+                           middlePointsActorList,
+                           tActor)
   sliderWidget1.AddObserver("InteractionEvent", callback)
   sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
@@ -509,8 +541,7 @@ if __name__ == '__main__':
     renderer.AddActor(middlePointsActorList[i])
   
   renderer.AddActor(linesActor)
-  if len(sys.argv) == 3 and sys.argv[2] == 'track':
-    renderer.AddActor(trajactoryActor)
+
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
