@@ -21,6 +21,8 @@ class PointSet():
     self.frequency_count = frequency_count
     if person_id >= -1:
       self.frequency = frequency_count[person_id][-1]
+    else:
+      self.frequency = 0
     
     if person_id == -1:
       num_points = len(feature)
@@ -53,10 +55,10 @@ class PointSet():
 
 
 class pointCallBack(object):
-  def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, person_middle_list,
-                point_xyz, middle_points, actorList, middlePointsActorList, tActor):
+  def __init__(self, sliderRep, sliderRep3, personlist, person_middle_list,
+                point_xyz, middle_points, actorList, middlePointsActorList):
     self.sliderRep = sliderRep
-    self.sliderRep2 = sliderRep2
+    # self.sliderRep2 = sliderRep2
     self.sliderRep3 = sliderRep3
     self.personlist = personlist
     self.person_middle_list = person_middle_list
@@ -64,23 +66,15 @@ class pointCallBack(object):
     self.middle_points = middle_points
     self.actorList = actorList
     self.middlePointsActorList = middlePointsActorList
-    self.tActor = tActor
     super().__init__()
 
   def __call__(self, caller, event):
     # print("the value is " + str(self.sliderRep.GetValue()))
-    person = int(self.sliderRep2.GetValue())
+    # person = int(self.sliderRep2.GetValue())
+    person = max_person
     record = int(self.sliderRep.GetValue())
     pointSize = float(self.sliderRep3.GetValue())
-    _, self.tActor[1] = drawtrajectory(person, self.middle_points, self.personlist[0].frequency_count)
-    print("KKK", self.tActor[1].GetLines().GetSize())
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(self.tActor[1])
-    mapper.Update()
-    self.tActor[0] = vtk.vtkActor()
-    self.tActor[0].SetMapper(mapper)
-    self.tActor[0].GetProperty().SetLineWidth(2)
-    self.tActor[0].Modified()
+
     for i in range(max_person):
       self.personlist[i].sphereSource = vtk.vtkSphereSource()
       # # sphereSource.SetCenter(0.0, 0.0, 0.0)
@@ -105,10 +99,9 @@ class pointCallBack(object):
       self.personlist[i].mapper.SetInputConnection(self.personlist[i].glyph3D.GetOutputPort())
       self.personlist[i].mapper.Update()
       self.actorList[i].SetMapper(self.personlist[i].mapper)
-      self.actorList[i].GetProperty().SetColor(1, 1, 1)
-      self.actorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
-        1 - self.personlist[i].frequency_count[i][-1]/(10),0)
-      self.actorList[i].GetProperty().EdgeVisibilityOn()
+      self.actorList[i].GetProperty().SetEdgeColor(1-i/(max_person+1),i/(max_person+1),0)
+      self.actorList[i].GetProperty().SetColor(1 - self.personlist[i].frequency_count[i][-1]/(10),
+            self.personlist[i].frequency_count[i][-1]/(10),0)
       self.actorList[i].Modified()
 
       # Handle middle points
@@ -119,7 +112,7 @@ class pointCallBack(object):
       # The last point is not middle point, so don't show it
       for j in range(tmp_len - 1):
         x, y, z = self.middle_points[i][j]
-        if person == 0 or i > person:
+        if person == 0 or i > person or record < 2:
           self.person_middle_list[i].points.SetPoint(j, 0, 0, 0)
         else:
           self.person_middle_list[i].points.SetPoint(j, x, y, z)
@@ -134,10 +127,9 @@ class pointCallBack(object):
       self.person_middle_list[i].mapper.SetInputConnection(self.person_middle_list[i].glyph3D.GetOutputPort())
       self.person_middle_list[i].mapper.Update()
       self.middlePointsActorList[i].SetMapper(self.person_middle_list[i].mapper)
-      self.middlePointsActorList[i].GetProperty().SetColor(1, 1, 1)
-      self.middlePointsActorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
-        1 - self.personlist[i].frequency_count[i][-1]/(10),0)
-      self.middlePointsActorList[i].GetProperty().EdgeVisibilityOn()
+      self.middlePointsActorList[i].GetProperty().SetEdgeColor(1-i/(max_person+1),i/(max_person+1),0)
+      self.middlePointsActorList[i].GetProperty().SetColor(1 - self.personlist[i].frequency_count[i][-1]/(10),
+            self.personlist[i].frequency_count[i][-1]/(10),0)
       self.middlePointsActorList[i].Modified()
 
 def slider(renderer, maximum, x, y, renderWindowInteractor, title):
@@ -148,7 +140,7 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   if title == 'point size':
     sliderRep.SetValue(0.05)
   elif title == 'record':
-    sliderRep.SetValue(max_record)
+    sliderRep.SetValue(1)
   elif title == 'person':
     sliderRep.SetValue(max_person)
   sliderRep.SetTitleText(title)
@@ -166,6 +158,72 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderWidget.EnabledOn()
   return sliderRep, sliderWidget
 
+class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
+ 
+    def __init__(self,actorList, middlePointsActorList, trajactoryActorList, parent=None):
+        self.AddObserver("LeftButtonPressEvent",self.leftButtonPressEvent)
+
+        # self.LastPickedActor = None
+        self.LastPickedActorId = -1
+        self.actorList = actorList
+        self.middlePointsActorList = middlePointsActorList
+        self.trajactoryActorList = trajactoryActorList
+ 
+    def leftButtonPressEvent(self,obj,event):
+        clickPos = self.GetInteractor().GetEventPosition()
+
+        picker = vtk.vtkPropPicker()
+        picker.Pick(clickPos[0], clickPos[1], 0, self.GetDefaultRenderer())
+        
+        # get the new
+        self.NewPickedActor = picker.GetActor()
+        
+        # If something was selected
+        if self.NewPickedActor and\
+          (self.NewPickedActor in self.actorList or self.NewPickedActor in self.middlePointsActorList):
+
+          curid = -1
+          if self.NewPickedActor in self.actorList:
+            for i in range(len(self.actorList)):
+              if self.NewPickedActor == self.actorList[i]:
+                curid = i
+          else:
+            for i in range(len(self.middlePointsActorList)):
+              if self.NewPickedActor == self.middlePointsActorList[i]:
+                curid = i
+          
+          if curid == self.LastPickedActorId:
+            for i in range(len(self.actorList)):
+              self.actorList[i].GetProperty().SetOpacity(1)
+              self.actorList[i].Modified()
+              self.middlePointsActorList[i].GetProperty().SetOpacity(1)
+              self.middlePointsActorList[i].Modified()
+              self.trajactoryActorList[i].GetProperty().SetOpacity(1)
+              self.trajactoryActorList[i].Modified()
+            
+            self.LastPickedActorId = -1
+          else:
+            for i in range(len(self.actorList)):
+              if i != curid:
+                # other non selected points
+                self.actorList[i].GetProperty().SetOpacity(0)
+                self.actorList[i].Modified()
+                self.middlePointsActorList[i].GetProperty().SetOpacity(0)
+                self.middlePointsActorList[i].Modified()
+                self.trajactoryActorList[i].GetProperty().SetOpacity(0)
+                self.trajactoryActorList[i].Modified()
+              else:
+                # selected point
+                self.middlePointsActorList[i].GetProperty().SetOpacity(1)
+                self.middlePointsActorList[i].Modified()
+                self.trajactoryActorList[i].GetProperty().SetOpacity(1)
+                self.trajactoryActorList[i].Modified()
+          
+            self.LastPickedActorId = curid
+
+        
+        self.OnLeftButtonDown()
+        return
 
 def getCoordinatesActor(feature):
   linesPolyData = vtk.vtkPolyData()
@@ -349,68 +407,55 @@ def drawText(featurePoints, featureText):
     textActorList.append(textActor)
   return textActorList
 
-def drawtrajectory(num_of_person, points, frequency_count):
-  linesPolyData = vtk.vtkPolyData()
+def drawtrajectory(points):
   
-  # Create three points
   origin = [0.0, 0.0, 0.0]
-
-  # Create a vtkPoints container and store the points in it
   zeroPoint = list()
-  pts = vtk.vtkPoints()
-  pts.InsertNextPoint(origin)
-  tempid = 1
   
+  tempid = 1
+  actorList = list()
   for personIdx in range(len(points)):
+    pts = vtk.vtkPoints()
+    pts.InsertNextPoint(origin)
+    linesPolyData = vtk.vtkPolyData()
+
     for pointIdx in range(len(points[personIdx])):
       x, y, z = points[personIdx][pointIdx]
       pts.InsertNextPoint([x, y, z])
-      if x == 0 and y == 0 and z == 0:
-        zeroPoint.append(tempid)
-      
-      tempid += 1
   
-  linesPolyData.SetPoints(pts)
-  lines = vtk.vtkCellArray()
-  lines.Initialize()
-  colors = vtk.vtkUnsignedCharArray()
-  colors.SetNumberOfComponents(3)
-  namedColors = vtk.vtkNamedColors()
-  for personIdx in range(num_of_person):
+    linesPolyData.SetPoints(pts)
+    lines = vtk.vtkCellArray()
+    colors = vtk.vtkUnsignedCharArray()
+    colors.SetNumberOfComponents(3)
+    namedColors = vtk.vtkNamedColors()
+    for personIdx in range(max_person):
 
-    numPoint = len(points[personIdx])
-    prevPointIndex = 0
-    for pointIdx in range(numPoint):
-      # Create the first line (between Origin and P0)
-      curPointIndex = personIdx * numPoint + pointIdx + 1
-      if curPointIndex in zeroPoint:
-        continue
-      line0 = vtk.vtkLine()
-      line0.GetPointIds().SetId(0, prevPointIndex)  # the second 0 is the index of the Origin in linesPolyData's points
-      line0.GetPointIds().SetId(1, curPointIndex)
-      lines.InsertNextCell(line0)
-      colorTuple = [int(frequency_count[personIdx][-1]*255/(10)), int(255 - frequency_count[personIdx][-1]*255/(10)), 0]
+      numPoint = len(points[personIdx])
+      prevPointIndex = 0
+      for pointIdx in range(numPoint):
+        line = vtk.vtkLine()
+        line.GetPointIds().SetId(0, pointIdx)  # the second 0 is the index of the Origin in linesPolyData's points
+        line.GetPointIds().SetId(1, pointIdx + 1)
+        lines.InsertNextCell(line)
+        try:
+            colors.InsertNextTupleValue(namedColors.GetColor3ub("red"))
+        except AttributeError:
+            # For compatibility with new VTK generic data arrays.
+            colors.InsertNextTypedTuple(namedColors.GetColor3ub("red"))
 
-      try:
-          colors.InsertNextTupleValue(colorTuple)
-      except AttributeError:
-          # For compatibility with new VTK generic data arrays.
-          colors.InsertNextTypedTuple(colorTuple)
-      
-      # Update current point index
-      prevPointIndex = curPointIndex
-  # Add the lines to the polydata container
-  linesPolyData.SetLines(lines)
-  linesPolyData.GetCellData().SetScalars(colors)
-  print(len(zeroPoint) , 15* len(points) - len(zeroPoint) , lines.GetSize ())
-  # Setup the visualization pipeline
-  mapper = vtk.vtkPolyDataMapper()
-  mapper.SetInputData(linesPolyData)
-  actor = vtk.vtkActor()
-  actor.SetMapper(mapper)
-  actor.GetProperty().SetLineWidth(2)
+    # Add the lines to the polydata container
+    linesPolyData.SetLines(lines)
+    linesPolyData.GetCellData().SetScalars(colors)
 
-  return actor, linesPolyData
+    # Setup the visualization pipeline
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputData(linesPolyData)
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetLineWidth(1)
+    actorList.append(actor)
+
+  return actorList
     
     
 
@@ -442,13 +487,13 @@ if __name__ == '__main__':
   featureText = feature_text.split("	")
   featureText = [i.strip(" ") for i in featureText]
 
-  sliderRep1, sliderWidget1 = slider(renderer, max_record, 40, 540, renderWindowInteractor, "record")
-  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
+  sliderRep1, sliderWidget1 = slider(renderer, 2, 40, 340, renderWindowInteractor, "record")
+  # sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
   sliderRep3, sliderWidget3 = slider(renderer, 0.1, 40, 140, renderWindowInteractor, "point size")
   
   balloonRep = vtk.vtkBalloonRepresentation()
   balloonRep.SetBalloonLayoutToImageRight()
-  balloonRep.GetTextProperty().SetFontSize(15)
+  balloonRep.GetTextProperty().SetFontSize(35)
   balloonWidget = vtk.vtkBalloonWidget()
   balloonWidget.SetInteractor(renderWindowInteractor)
   balloonWidget.SetRepresentation(balloonRep)
@@ -460,17 +505,8 @@ if __name__ == '__main__':
     person_middle_list.append(PointSet(-i-2, [0 for _ in range(max_point_per_person - 1)], frequency_count, 0.05))
 
   linesActor = getCoordinatesActor(feature)
-  trajactoryActor, linesPolyData = drawtrajectory(41, middle_points, frequency_count)
-  tActor = [trajactoryActor, linesPolyData]
-  mapper = vtk.vtkPolyDataMapper()
-  mapper.SetInputData(tActor[1])
-  mapper.Update()
-  tActor[0] = vtk.vtkActor()
-  tActor[0].SetMapper(mapper)
-  tActor[0].GetProperty().SetLineWidth(2)
-  tActor[0].Modified()
-  
-  
+  trajactoryActorList = drawtrajectory(middle_points)
+
   faeturePoint = PointSet(-1, feature, frequency_count, 0.03)
   featureActor = vtk.vtkActor()
   featureActor.SetMapper(faeturePoint.mapper)
@@ -492,15 +528,15 @@ if __name__ == '__main__':
   for i in range(max_person):
     actor = vtk.vtkActor()
     actor.SetMapper(personlist[i].mapper)
-    actor.GetProperty().SetEdgeColor(frequency_count[i][-1]/(10),1 - frequency_count[i][-1]/(10),0)
+    actor.GetProperty().SetColor(1 - frequency_count[i][-1]/(10),frequency_count[i][-1]/(10),0)
     actor.GetProperty().EdgeVisibilityOn()
-    actor.GetProperty().SetColor(1,1,1)
+    actor.GetProperty().SetEdgeColor(1-i/(max_person+1),i/(max_person+1),0)
     actor.Modified()
     actorList.append(actor)
     ballonText = 'Patient{}'.format(i)
     for k in range(len(frequency_count[i]) -1 ):
       if frequency_count[i][k] != 0:
-        ballonText += "\nFrequency {} ".format(featureText[k])
+        ballonText += "\nSymptom {} ".format(featureText[k])
     balloonWidget.AddBalloon(actor, ballonText)
 
   middlePointsActorList = []
@@ -510,38 +546,55 @@ if __name__ == '__main__':
     actor.GetProperty().SetColor(0,1,0)
     actor.Modified()
     middlePointsActorList.append(actor)
-  if len(sys.argv) == 3 and sys.argv[2] == 'track':
-    renderer.AddActor(tActor[0])
   callback = pointCallBack(sliderRep1, 
-                           sliderRep2, 
+                          #  sliderRep2, 
                            sliderRep3, 
                            personlist,  
                            person_middle_list,
                            point_xyz, 
                            middle_points,
                            actorList,
-                           middlePointsActorList,
-                           tActor)
+                           middlePointsActorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
-  sliderWidget2.AddObserver("InteractionEvent", callback)
+  # sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
   
   axes = vtk.vtkAxesActor()
+
+  # add the custom style
+  style = MouseInteractorHighLightActor(actorList, middlePointsActorList, trajactoryActorList)
+  style.SetDefaultRenderer(renderer)
+  renderWindowInteractor.SetInteractorStyle(style)
 
   textActorList = drawText(feature, featureText)
   for i in range(len(feature)):
     renderer.AddActor(textActorList[i])
     textActorList[i].SetCamera( renderer.GetActiveCamera() )
 
+  lut = vtk.vtkLookupTable()
+  lut.SetTableRange(0, 10)
+  lut.SetHueRange(0, 0.3)
+  lut.SetSaturationRange(1, 1)
+  lut.SetValueRange(0.5, 1)
+  lut.Build()
+
+  scalarbar = vtk.vtkScalarBarActor()
+  scalarbar.SetLookupTable(lut)
+  scalarbar.SetTitle('Symptom Count')
+  scalarbar.SetNumberOfLabels(4)
+
   renderer.AddActor(BigSphereActor)
   renderer.AddActor(featureActor)
+  renderer.AddActor2D(scalarbar)
   #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
     renderer.AddActor(middlePointsActorList[i])
   
   renderer.AddActor(linesActor)
-
+  if len(sys.argv) == 3 and sys.argv[2] == 'track':
+    for i in range(len(trajactoryActorList)):
+      renderer.AddActor(trajactoryActorList[i])
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
