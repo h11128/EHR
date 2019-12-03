@@ -60,7 +60,7 @@ class PointSet():
 
 class pointCallBack(object):
   def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, person_middle_list,
-                point_xyz, middle_points, actorList, middlePointsActorList, trajactoryActorList):
+                point_xyz, middle_points, actorList, middlePointsActorList, trajactoryActorList, color_map):
     self.sliderRep = sliderRep
     self.sliderRep2 = sliderRep2
     self.sliderRep3 = sliderRep3
@@ -71,6 +71,7 @@ class pointCallBack(object):
     self.actorList = actorList
     self.middlePointsActorList = middlePointsActorList
     self.trajactoryActorList = trajactoryActorList
+    self.color_map = color_map
     super().__init__()
 
   def __call__(self, caller, event):
@@ -106,8 +107,7 @@ class pointCallBack(object):
       self.personlist[i].mapper.SetInputConnection(self.personlist[i].glyph3D.GetOutputPort())
       self.personlist[i].mapper.Update()
       self.actorList[i].SetMapper(self.personlist[i].mapper)
-      self.actorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
-            1 - self.personlist[i].frequency_count[i][-1]/(10),0)
+      self.actorList[i].GetProperty().SetEdgeColor(self.color_map[self.personlist[i].frequency_count[i][-1]][:3])
       self.actorList[i].GetProperty().EdgeVisibilityOn()
       self.actorList[i].GetProperty().SetColor(1, 1, 1)
       self.actorList[i].Modified()
@@ -144,8 +144,7 @@ class pointCallBack(object):
         self.person_middle_list[i][mm].mapper.SetInputConnection(self.person_middle_list[i][mm].glyph3D.GetOutputPort())
         self.person_middle_list[i][mm].mapper.Update()
         self.middlePointsActorList[i][mm].SetMapper(self.person_middle_list[i][mm].mapper)
-        self.middlePointsActorList[i][mm].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
-              1 - self.personlist[i].frequency_count[i][-1]/(10),0)
+        self.middlePointsActorList[i][mm].GetProperty().SetEdgeColor(self.color_map[self.personlist[i].frequency_count[i][-1]][:3])
         self.middlePointsActorList[i][mm].GetProperty().EdgeVisibilityOn()
         self.middlePointsActorList[i][mm].GetProperty().SetColor(1,1,1)
         self.middlePointsActorList[i][mm].Modified()
@@ -477,7 +476,7 @@ def drawText(featurePoints, featureText):
     textActorList.append(textActor)
   return textActorList
 
-def drawtrajectory(points, frequency_count):
+def drawtrajectory(points, frequency_count, color_map):
   
   origin = [0.0, 0.0, 0.0]
   zeroPoint = list()
@@ -499,7 +498,9 @@ def drawtrajectory(points, frequency_count):
     colors = vtk.vtkUnsignedCharArray()
     colors.SetNumberOfComponents(3)
     namedColors = vtk.vtkNamedColors()
-    colorTuple = [int(frequency_count[personIdx][-1]*255/(10)), int(255-frequency_count[personIdx][-1]*255/(10)), 0]
+    colorTuple = color_map[frequency_count[personIdx][-1]][:3]
+    colorTuple = [int(i* 255) for i in colorTuple]
+    print(colorTuple)
     for personIdx in range(max_person):
 
       numPoint = len(points[personIdx])
@@ -536,6 +537,20 @@ def drawtrajectory(points, frequency_count):
 
 if __name__ == '__main__':
   EHRDataPath = sys.argv[1]
+
+  lut = vtk.vtkLookupTable()
+  lut.SetTableRange(0, 10)
+  lut.SetHueRange(0, 0.333)
+  lut.SetSaturationRange(0.9, 0.9)
+  lut.SetValueRange(0.9, 0.9)
+  lut.SetNumberOfColors(11)
+  lut.Build()
+  color_map = []
+  for i in range(lut.GetNumberOfTableValues()):
+    color_map.append(lut.GetTableValue(i))
+  for i in range(lut.GetNumberOfTableValues()):
+    lut.SetTableValue(i, color_map[lut.GetNumberOfTableValues()-1-i])
+  color_map.reverse()
 
   reader = vtk.vtkDelimitedTextReader()
   reader.SetFileName(EHRDataPath)
@@ -582,7 +597,7 @@ if __name__ == '__main__':
       person_middle_list[i].append(PointSet(-i-2, [0], frequency_count, 0.05))
 
   linesActor = getCoordinatesActor(feature)
-  trajactoryActorList = drawtrajectory(middle_points, frequency_count)
+  trajactoryActorList = drawtrajectory(middle_points, frequency_count, color_map)
 
   faeturePoint = PointSet(-1, feature, frequency_count, 0.02)
   featureActor = vtk.vtkActor()
@@ -607,7 +622,7 @@ if __name__ == '__main__':
     actor.SetMapper(personlist[i].mapper)
     actor.GetProperty().SetColor(1,1,1)
     actor.GetProperty().EdgeVisibilityOn()
-    actor.GetProperty().SetEdgeColor(frequency_count[i][-1]/(10), 1 - frequency_count[i][-1]/(10),0)
+    actor.GetProperty().SetEdgeColor(color_map[frequency_count[i][-1]][:3])
     actor.Modified()
     actorList.append(actor)
     ballonText = 'Patient{}'.format(i)
@@ -639,7 +654,8 @@ if __name__ == '__main__':
                            middle_points,
                            actorList,
                            middlePointsActorList,
-                           trajactoryActorList)
+                           trajactoryActorList,
+                           color_map)
   sliderWidget1.AddObserver("InteractionEvent", callback)
   sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
@@ -656,18 +672,13 @@ if __name__ == '__main__':
     renderer.AddActor(textActorList[i])
     textActorList[i].SetCamera( renderer.GetActiveCamera() )
 
-  lut = vtk.vtkLookupTable()
-  lut.SetTableRange(0, 10)
-  lut.SetHueRange(0, 0.3)
-  lut.SetSaturationRange(1, 1)
-  lut.SetValueRange(0.5, 1)
-  lut.Build()
+  
   #print(frequency_count[0])
   #print(middle_points[0])
   scalarbar = vtk.vtkScalarBarActor()
   scalarbar.SetLookupTable(lut)
   scalarbar.SetTitle('Symptom Count')
-  scalarbar.SetNumberOfLabels(4)
+  scalarbar.SetNumberOfLabels(10)
 
   #renderer.AddActor(BigSphereActor)
   renderer.AddActor(featureActor)
