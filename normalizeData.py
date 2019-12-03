@@ -47,6 +47,7 @@ def normallize_sequence(X, duration_range):
       X[i] = (X[i]-duration_range[0])/duration_range[2]
     else:
       X[i] = 0.00001
+  print(duration_range)
   return X[1:]
 
 patient_id = table.col_values(0, 1)

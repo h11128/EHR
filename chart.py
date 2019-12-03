@@ -9,7 +9,10 @@ from scipy.stats import pearsonr
 max_record = 1
 max_person = 41
 max_point_per_person = 15
+maximum_duration = 5932
+minus_duration = 3047
 
+wanted_person = 41
 class PointSet():
   def __init__(self, person_id,  feature, frequency_count, radius):
     self.sphereSource = vtk.vtkSphereSource()
@@ -34,8 +37,9 @@ class PointSet():
         self.points.SetPoint(i,feature[i])
       self.sphereSource.SetRadius(radius)
     elif person_id < -1:
-      self.points.SetNumberOfPoints(max_point_per_person - 1)
-      for i in range(max_point_per_person - 1):
+      num_points = len(feature)
+      self.points.SetNumberOfPoints(num_points)
+      for i in range(num_points):
         self.points.SetPoint(i,0,0,0)
     else:
       self.points.SetNumberOfPoints(max_record)
@@ -55,10 +59,10 @@ class PointSet():
 
 
 class pointCallBack(object):
-  def __init__(self, sliderRep, sliderRep3, personlist, person_middle_list,
+  def __init__(self, sliderRep, sliderRep2, sliderRep3, personlist, person_middle_list,
                 point_xyz, middle_points, actorList, middlePointsActorList, trajactoryActorList):
     self.sliderRep = sliderRep
-    # self.sliderRep2 = sliderRep2
+    self.sliderRep2 = sliderRep2
     self.sliderRep3 = sliderRep3
     self.personlist = personlist
     self.person_middle_list = person_middle_list
@@ -71,7 +75,9 @@ class pointCallBack(object):
 
   def __call__(self, caller, event):
     # print("the value is " + str(self.sliderRep.GetValue()))
-    # person = int(self.sliderRep2.GetValue())
+    global wanted_person 
+    wanted_person = int(self.sliderRep2.GetValue())
+
     person = max_person
     record = float(self.sliderRep.GetValue())
     pointSize = float(self.sliderRep3.GetValue())
@@ -106,40 +112,44 @@ class pointCallBack(object):
       self.actorList[i].GetProperty().SetColor(1, 1, 1)
       self.actorList[i].Modified()
 
-      # Handle middle points
-      self.person_middle_list[i].sphereSource = vtk.vtkSphereSource()
-      self.person_middle_list[i].sphereSource.SetRadius(pointSize * 0.5)
-
-      tmp_len = len(self.middle_points[i])
-      # The last point is not middle point, so don't show it
-      for j in range(tmp_len - 1):
-        x, y, z = self.middle_points[i][j]
-        if person == 0 or i > person or record < 3 or record > 5:
-          self.person_middle_list[i].points.SetPoint(j, 0, 0, 0)
-        else:
-          self.person_middle_list[i].points.SetPoint(j, x, y, z)
-          
-
-      self.person_middle_list[i].graph = vtk.vtkPolyData()
-      self.person_middle_list[i].graph.SetPoints(self.person_middle_list[i].points)
-      self.person_middle_list[i].glyph3D = vtk.vtkGlyph3D()
-      self.person_middle_list[i].glyph3D.SetSourceConnection(self.person_middle_list[i].sphereSource.GetOutputPort())
-      self.person_middle_list[i].glyph3D.SetInputData(self.person_middle_list[i].graph)
-      self.person_middle_list[i].glyph3D.Update()
-      self.person_middle_list[i].mapper.SetInputConnection(self.person_middle_list[i].glyph3D.GetOutputPort())
-      self.person_middle_list[i].mapper.Update()
-      self.middlePointsActorList[i].SetMapper(self.person_middle_list[i].mapper)
-      self.middlePointsActorList[i].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
-            1 - self.personlist[i].frequency_count[i][-1]/(10),0)
-      self.middlePointsActorList[i].GetProperty().EdgeVisibilityOn()
-      self.middlePointsActorList[i].GetProperty().SetColor(1,1,1)
-      self.middlePointsActorList[i].Modified()
+      # trajactoryActor
       if record < 2 or record > 4:
         self.trajactoryActorList[i].SetVisibility(False)
         self.trajactoryActorList[i].Modified()
       else:
         self.trajactoryActorList[i].SetVisibility(True)
         self.trajactoryActorList[i].Modified()
+
+      # Handle middle points
+
+      for mm in range(max_point_per_person -1):
+        self.person_middle_list[i][mm].sphereSource = vtk.vtkSphereSource()
+        self.person_middle_list[i][mm].sphereSource.SetRadius(pointSize * 0.5)
+      #tmp_len = len(self.middle_points[i])
+      # The last point is not middle point, so don't show it
+      #for j in range(tmp_len - 1):
+        x, y, z = self.middle_points[i][mm]
+        if person == 0 or i > person or record < 3 or record > 5:
+          self.person_middle_list[i][mm].points.SetPoint(0, 0, 0, 0)
+        else:
+          self.person_middle_list[i][mm].points.SetPoint(0, x, y, z)
+            
+
+        self.person_middle_list[i][mm].graph = vtk.vtkPolyData()
+        self.person_middle_list[i][mm].graph.SetPoints(self.person_middle_list[i][mm].points)
+        self.person_middle_list[i][mm].glyph3D = vtk.vtkGlyph3D()
+        self.person_middle_list[i][mm].glyph3D.SetSourceConnection(self.person_middle_list[i][mm].sphereSource.GetOutputPort())
+        self.person_middle_list[i][mm].glyph3D.SetInputData(self.person_middle_list[i][mm].graph)
+        self.person_middle_list[i][mm].glyph3D.Update()
+        self.person_middle_list[i][mm].mapper.SetInputConnection(self.person_middle_list[i][mm].glyph3D.GetOutputPort())
+        self.person_middle_list[i][mm].mapper.Update()
+        self.middlePointsActorList[i][mm].SetMapper(self.person_middle_list[i][mm].mapper)
+        self.middlePointsActorList[i][mm].GetProperty().SetEdgeColor(self.personlist[i].frequency_count[i][-1]/(10),
+              1 - self.personlist[i].frequency_count[i][-1]/(10),0)
+        self.middlePointsActorList[i][mm].GetProperty().EdgeVisibilityOn()
+        self.middlePointsActorList[i][mm].GetProperty().SetColor(1,1,1)
+        self.middlePointsActorList[i][mm].Modified()
+
 
 def slider(renderer, maximum, x, y, renderWindowInteractor, title):
   sliderRep = vtk.vtkSliderRepresentation2D()
@@ -169,7 +179,7 @@ def slider(renderer, maximum, x, y, renderWindowInteractor, title):
 
 class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
  
-    def __init__(self,actorList, middlePointsActorList, trajactoryActorList, parent=None):
+    def __init__(self,actorList, middlePointsActorList, trajactoryActorList, distance, parent=None):
         self.AddObserver("LeftButtonPressEvent",self.leftButtonPressEvent)
 
         # self.LastPickedActor = None
@@ -177,6 +187,7 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
         self.actorList = actorList
         self.middlePointsActorList = middlePointsActorList
         self.trajactoryActorList = trajactoryActorList
+        self.distance = distance
  
     def leftButtonPressEvent(self,obj,event):
         clickPos = self.GetInteractor().GetEventPosition()
@@ -205,26 +216,34 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
             for i in range(len(self.actorList)):
               self.actorList[i].GetProperty().SetOpacity(1)
               self.actorList[i].Modified()
-              self.middlePointsActorList[i].GetProperty().SetOpacity(1)
-              self.middlePointsActorList[i].Modified()
               self.trajactoryActorList[i].GetProperty().SetOpacity(1)
               self.trajactoryActorList[i].Modified()
+              for mm in range(max_point_per_person -1 ):
+                self.middlePointsActorList[i][mm].SetVisibility(True)
+                self.middlePointsActorList[i][mm].Modified()
             
             self.LastPickedActorId = -1
           else:
+            
+            wanted_list = distance[curid][:wanted_person]
             for i in range(len(self.actorList)):
+              
               if i != curid:
                 # other non selected points
-                self.actorList[i].GetProperty().SetOpacity(0)
-                self.actorList[i].Modified()
-                self.middlePointsActorList[i].GetProperty().SetOpacity(0)
-                self.middlePointsActorList[i].Modified()
+                if i not in wanted_list:
+                  self.actorList[i].GetProperty().SetOpacity(0)
+                  self.actorList[i].Modified()
                 self.trajactoryActorList[i].GetProperty().SetOpacity(0)
                 self.trajactoryActorList[i].Modified()
+                for mm in range(max_point_per_person -1 ):
+                  self.middlePointsActorList[i][mm].SetVisibility(False)
+                  self.middlePointsActorList[i][mm].Modified()
+ 
               else:
                 # selected point
-                self.middlePointsActorList[i].GetProperty().SetOpacity(1)
-                self.middlePointsActorList[i].Modified()
+                for mm in range(max_point_per_person -1 ):
+                  self.middlePointsActorList[i][mm].SetVisibility(True)
+                  self.middlePointsActorList[i][mm].Modified()
                 self.trajactoryActorList[i].GetProperty().SetOpacity(1)
                 self.trajactoryActorList[i].Modified()
           
@@ -332,7 +351,7 @@ def featureVector(filename):
     rho_z, _ = pearsonr(features[2], features[i])
     angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
     angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(i+3, rho_x, rho_y, rho_z, angle1, angle2, 2)
+    vector = computeVector(i+3, rho_x, rho_y, rho_z, angle1, angle2, 3)
     total_feature[i+3] = vector
   return total_feature
   
@@ -343,6 +362,7 @@ def pointCalculate(rootTable, feature):
   feature_array = np.array(feature)
   # delete feature stress since not useful, not need first column person_id
   points_data = [tuple([0 for _ in range(colsCount-1)]) for _ in range(max_person*max_record)]
+  
   #print(len(points_data))
   all_middle_points = []
   patient_count = 0
@@ -396,6 +416,42 @@ def pointCalculate(rootTable, feature):
 
   return point_coordinate, all_middle_points, frequency_count
 
+def durationCalculate(middle_points, feature_vector, frequency_count):
+  duration = [[-1 for _ in range(max_point_per_person)] for _ in range(max_person)]
+  for i in range(max_person):
+    for j in range(max_point_per_person):
+      if frequency_count[i][j]!= 0:
+        if j == 0:
+          last_point = [0,0,0]
+        else:
+          last_point = middle_points[i][j-1]
+        current_point = middle_points[i][j]
+        vector = [x-y for x,y in zip(current_point, last_point)]
+        Ovector = feature_vector[j]
+        ratio = 0
+        for k in range(3):
+          if Ovector[k] != 0:
+            ratio = vector[k]/Ovector[k]
+            break
+        days = int (maximum_duration*ratio - minus_duration)
+        duration[i][j] = days
+  return duration
+
+def distanceCalculate(point_xyz):
+  
+  distance = [[-1 for _ in range(max_person)] for _ in range(max_person)]
+  for i in range(max_person):
+    for j in range(max_person):
+      if i == j:
+        distance[i][j] == 0
+      else:
+        point_a = point_xyz[i]
+        point_b = point_xyz[j]
+        distance[i][j] = math.sqrt(sum([(x1-x2)**2 for x1,x2 in zip(point_a, point_b)]))
+  for i in range(max_person):
+    distance[i] = [k[0] for k in sorted(enumerate(distance[i]), key=lambda x:x[1])]
+  return distance
+
 
 def drawText(featurePoints, featureText):
   textActorList = []
@@ -423,6 +479,7 @@ def drawtrajectory(points, frequency_count):
   
   tempid = 1
   actorList = list()
+
   for personIdx in range(len(points)):
     pts = vtk.vtkPoints()
     pts.InsertNextPoint(origin)
@@ -430,8 +487,6 @@ def drawtrajectory(points, frequency_count):
 
     for pointIdx in range(len(points[personIdx])):
       x, y, z = points[personIdx][pointIdx]
-      if personIdx == 0:
-        print((x,y,z))
       pts.InsertNextPoint([x, y, z])
   
     linesPolyData.SetPoints(pts)
@@ -486,6 +541,9 @@ if __name__ == '__main__':
   rootTable = reader.GetOutput()
   feature = featureVector(EHRDataPath)
   point_xyz, middle_points, frequency_count = pointCalculate(rootTable, feature)
+
+  duration = durationCalculate(middle_points, feature, frequency_count)
+  distance = distanceCalculate(point_xyz)
   #print(frequency_count)
   renderer = vtk.vtkRenderer()
   renderWindow = vtk.vtkRenderWindow()
@@ -501,7 +559,7 @@ if __name__ == '__main__':
   featureText = [i.strip(" ") for i in featureText]
 
   sliderRep1, sliderWidget1 = slider(renderer, 7, 40, 340, renderWindowInteractor, "record")
-  # sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
+  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 240, renderWindowInteractor, "person")
   sliderRep3, sliderWidget3 = slider(renderer, 0.1, 40, 140, renderWindowInteractor, "point size")
   
   balloonRep = vtk.vtkBalloonRepresentation()
@@ -512,18 +570,19 @@ if __name__ == '__main__':
   balloonWidget.SetRepresentation(balloonRep)
 
   personlist = []
-  person_middle_list = []
+  person_middle_list = [[] for _ in range(max_person)]
   for i in range(max_person):
     personlist.append(PointSet(i, feature, frequency_count, 0.05) )
-    person_middle_list.append(PointSet(-i-2, [0 for _ in range(max_point_per_person - 1)], frequency_count, 0.05))
+    for j in range(max_point_per_person - 1):
+      person_middle_list[i].append(PointSet(-i-2, [0], frequency_count, 0.05))
 
   linesActor = getCoordinatesActor(feature)
   trajactoryActorList = drawtrajectory(middle_points, frequency_count)
 
-  faeturePoint = PointSet(-1, feature, frequency_count, 0.03)
+  faeturePoint = PointSet(-1, feature, frequency_count, 0.02)
   featureActor = vtk.vtkActor()
   featureActor.SetMapper(faeturePoint.mapper)
-  featureActor.GetProperty().SetColor(0 ,0 ,0)
+  featureActor.GetProperty().SetColor(1 ,1 ,1)
   featureActor.Modified()
   
   BigSphereFeature =[[0,0,0]]
@@ -547,20 +606,27 @@ if __name__ == '__main__':
     actor.Modified()
     actorList.append(actor)
     ballonText = 'Patient{}'.format(i)
+
     for k in range(len(frequency_count[i]) -1 ):
       if frequency_count[i][k] != 0:
-        ballonText += "\nSymptom {} ".format(featureText[k])
+        ballonText += "\n{}th Symptom {}  {} days".format(k, featureText[k], duration[i][k])
     balloonWidget.AddBalloon(actor, ballonText)
 
-  middlePointsActorList = []
+  middlePointsActorList = [[] for _ in range(max_person)]
   for i in range(max_person):
-    actor = vtk.vtkActor()
-    actor.SetMapper(person_middle_list[i].mapper)
-    actor.GetProperty().SetColor(0,1,0)
-    actor.Modified()
-    middlePointsActorList.append(actor)
+    for j in range(max_point_per_person -1):
+      actor = vtk.vtkActor()
+      actor.SetMapper(person_middle_list[i][j].mapper)
+      actor.GetProperty().SetColor(0,1,0)
+      actor.Modified()
+      if frequency_count[i][j] != 0:
+        ballonText = 'Patient{}'.format(i)
+        ballonText += "\n{}th Symptom {}  {} days".format(j, featureText[j], duration[i][j])
+        balloonWidget.AddBalloon(actor, ballonText)
+      middlePointsActorList[i].append(actor)
+  
   callback = pointCallBack(sliderRep1, 
-                          #  sliderRep2, 
+                           sliderRep2, 
                            sliderRep3, 
                            personlist,  
                            person_middle_list,
@@ -570,13 +636,13 @@ if __name__ == '__main__':
                            middlePointsActorList,
                            trajactoryActorList)
   sliderWidget1.AddObserver("InteractionEvent", callback)
-  # sliderWidget2.AddObserver("InteractionEvent", callback)
+  sliderWidget2.AddObserver("InteractionEvent", callback)
   sliderWidget3.AddObserver("InteractionEvent", callback)
   
   axes = vtk.vtkAxesActor()
 
   # add the custom style
-  style = MouseInteractorHighLightActor(actorList, middlePointsActorList, trajactoryActorList)
+  style = MouseInteractorHighLightActor(actorList, middlePointsActorList, trajactoryActorList, distance )
   style.SetDefaultRenderer(renderer)
   renderWindowInteractor.SetInteractorStyle(style)
 
@@ -591,24 +657,27 @@ if __name__ == '__main__':
   lut.SetSaturationRange(1, 1)
   lut.SetValueRange(0.5, 1)
   lut.Build()
-
+  #print(frequency_count[0])
+  #print(middle_points[0])
   scalarbar = vtk.vtkScalarBarActor()
   scalarbar.SetLookupTable(lut)
   scalarbar.SetTitle('Symptom Count')
   scalarbar.SetNumberOfLabels(4)
 
-  renderer.AddActor(BigSphereActor)
+  #renderer.AddActor(BigSphereActor)
   renderer.AddActor(featureActor)
   renderer.AddActor2D(scalarbar)
   #renderer.AddActor(axes)
   for i in range(max_person):
     renderer.AddActor(actorList[i])
-    renderer.AddActor(middlePointsActorList[i])
+    for j in range(max_point_per_person -1):
+      renderer.AddActor(middlePointsActorList[i][j])
   
   renderer.AddActor(linesActor)
   if len(sys.argv) == 3 and sys.argv[2] == 'track':
     for i in range(len(trajactoryActorList)):
       renderer.AddActor(trajactoryActorList[i])
+
   renderer.ResetCamera()
   renderWindow.Render()
   renderWindow.SetSize(2000, 1500)
