@@ -93,7 +93,7 @@ class pointCallBack(object):
 
       for j in range(max_record):
         index = (i)*max_record + j
-        if (person ==0 or record ==0 or record > 6):
+        if (person ==0 or record <1 or record > 6):
           self.personlist[i].points.SetPoint(0,0,0,0)
         elif (i>person or j >record):
           self.personlist[i].points.SetPoint(0,0,0,0)
@@ -310,6 +310,7 @@ def normalizeVector(original_vector):
   
 def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
   #angle mode
+  vector = []
   if mode == 0:
     vector = [math.cos(angle1), math.sin(angle1), math.cos(angle2)]
   #disimilarity mode, where similar vector will far from each other
@@ -336,14 +337,22 @@ def computeVector(vector_number, rho_x, rho_y, rho_z, angle1, angle2, mode):
     baseVector.append([value, -value, -value])
     baseVector.append([-value, -value, -value])
     vector = baseVector[vector_number]
-  
+    
+  elif mode == 4:
+    base0 = [1, 0, 0]
+    angle = 2 * math.pi * vector_number /rho_x
+    base1 = [math.sin(angle), math.cos(angle), 0]
+    vector = base1
+
   final_vector = normalizeVector(vector)
   return final_vector
 
-def featureVector(filename):
+def featureVector(filename, mode):
   pd_read = pd.read_csv(filename)
   num_feature = len(list(pd_read.iloc[0,:]))-1
   total_feature = [[1,0,0],[0,1,0],[0,0,1]]
+  for i in range(num_feature-3):
+    total_feature.append([0,0,0])
   features = []
   angle1 = random.random()*math.pi
   angle2 = random.random()*math.pi
@@ -352,17 +361,23 @@ def featureVector(filename):
     features.append(list(pd_read.iloc[:,i+1]))
   rowsCount = len(features[0])
   colsCount = len(features)
-  for i in range(num_feature-3):
-    total_feature.append([0,0,0])
-  # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
+  if mode != 4:
+      
+    for i in range(num_feature-3):
+    # gender, age_group, date_of_injury, PRE_max_days, POST_max_days, and Symptom frequency
 
-    rho_x, _ = pearsonr(features[0], features[i])
-    rho_y, _ = pearsonr(features[1], features[i])
-    rho_z, _ = pearsonr(features[2], features[i])
-    angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
-    angle2 = (abs(rho_z) +1)/ 2 * math.pi
-    vector = computeVector(i+3, rho_x, rho_y, rho_z, angle1, angle2, 3)
-    total_feature[i+3] = vector
+      rho_x, _ = pearsonr(features[0], features[i])
+      rho_y, _ = pearsonr(features[1], features[i])
+      rho_z, _ = pearsonr(features[2], features[i])
+      angle1 = (abs(rho_x) + 1) / (rho_x+1+rho_y+1) * math.pi
+      angle2 = (abs(rho_z) +1)/ 2 * math.pi
+      vector = computeVector(i+3, rho_x, rho_y, rho_z, angle1, angle2, mode)
+      total_feature[i+3] = vector
+  else:
+    for i in range(num_feature):
+      vector = computeVector(i, num_feature, 0, 0, 0, 0, mode)
+      total_feature[i] = vector
+
   return total_feature
   
 def pointCalculate(rootTable, feature):
@@ -543,12 +558,15 @@ def drawtrajectory(points, frequency_count, color_map):
 
 if __name__ == '__main__':
   EHRDataPath = sys.argv[1]
-
+  if len(sys.argv) >= 3:
+    mode = int (sys.argv[2])
+  else:
+    mode = 3
   lut = vtk.vtkLookupTable()
   lut.SetTableRange(0, 10)
   lut.SetHueRange(0, 0.333)
   lut.SetSaturationRange(0.9, 0.9)
-  lut.SetValueRange(0.9, 0.9)
+  lut.SetValueRange(0.75, 0.75)
   lut.SetNumberOfColors(11)
   lut.Build()
   color_map = []
@@ -565,7 +583,7 @@ if __name__ == '__main__':
   reader.Update()
 
   rootTable = reader.GetOutput()
-  feature = featureVector(EHRDataPath)
+  feature = featureVector(EHRDataPath, mode)
   point_xyz, middle_points, frequency_count = pointCalculate(rootTable, feature)
 
   duration = durationCalculate(middle_points, feature, frequency_count)
@@ -605,9 +623,9 @@ if __name__ == '__main__':
   linesActor = getCoordinatesActor(feature)
   trajactoryActorList = drawtrajectory(middle_points, frequency_count, color_map)
 
-  faeturePoint = PointSet(-1, feature, frequency_count, 0.02)
+  featurePoint = PointSet(-1, feature, frequency_count, 0.02)
   featureActor = vtk.vtkActor()
-  featureActor.SetMapper(faeturePoint.mapper)
+  featureActor.SetMapper(featurePoint.mapper)
   featureActor.GetProperty().SetColor(1 ,1 ,1)
   featureActor.Modified()
   
