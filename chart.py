@@ -506,7 +506,7 @@ def drawtrajectory(points, frequency_count, color_map):
     namedColors = vtk.vtkNamedColors()
     colorTuple = color_map[frequency_count[personIdx][-1]][:3]
     colorTuple = [int(i* 255) for i in colorTuple]
-    print(colorTuple)
+    
     for personIdx in range(max_person):
 
       numPoint = len(points[personIdx])
