@@ -13,6 +13,8 @@ maximum_duration = 5932
 minus_duration = 3047
 
 wanted_person = 41
+selected_id = -1
+
 class PointSet():
   def __init__(self, person_id,  feature, frequency_count, radius):
     self.sphereSource = vtk.vtkSphereSource()
@@ -76,6 +78,7 @@ class pointCallBack(object):
   def __call__(self, caller, event):
     # print("the value is " + str(self.sliderRep.GetValue()))
     global wanted_person 
+    global selected_id
     wanted_person = int(self.sliderRep2.GetValue())
 
     person = max_person
@@ -113,12 +116,13 @@ class pointCallBack(object):
       self.actorList[i].Modified()
 
       # trajactoryActor
-      if record < 2 or record > 4:
-        self.trajactoryActorList[i].SetVisibility(False)
-        self.trajactoryActorList[i].Modified()
-      else:
+      if (i == selected_id or selected_id == -1) and 2 <= record and record <= 4:
         self.trajactoryActorList[i].SetVisibility(True)
         self.trajactoryActorList[i].Modified()
+      else:
+        self.trajactoryActorList[i].SetVisibility(False)
+        self.trajactoryActorList[i].Modified()
+
 
       # Handle middle points
 
@@ -190,6 +194,7 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
         self.distance = distance
  
     def leftButtonPressEvent(self,obj,event):
+        global selected_id
         clickPos = self.GetInteractor().GetEventPosition()
 
         picker = vtk.vtkPropPicker()
@@ -213,6 +218,7 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
                 curid = i
           
           if curid == self.LastPickedActorId:
+            selected_id = -1
             for i in range(len(self.actorList)):
               self.actorList[i].GetProperty().SetOpacity(1)
               self.actorList[i].Modified()
@@ -224,7 +230,7 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
             
             self.LastPickedActorId = -1
           else:
-            
+            selected_id = curid
             wanted_list = distance[curid][:wanted_person]
             for i in range(len(self.actorList)):
               
@@ -563,8 +569,8 @@ if __name__ == '__main__':
   featureText = feature_text.split("	")
   featureText = [i.strip(" ") for i in featureText]
 
-  sliderRep1, sliderWidget1 = slider(renderer, 7, 40, 340, renderWindowInteractor, "record")
-  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 240, renderWindowInteractor, "person")
+  sliderRep1, sliderWidget1 = slider(renderer, 7, 40, 540, renderWindowInteractor, "record")
+  sliderRep2, sliderWidget2 = slider(renderer, max_person, 40, 340, renderWindowInteractor, "person")
   sliderRep3, sliderWidget3 = slider(renderer, 0.1, 40, 140, renderWindowInteractor, "point size")
   
   balloonRep = vtk.vtkBalloonRepresentation()
