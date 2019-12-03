@@ -216,7 +216,7 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
             for i in range(len(self.actorList)):
               self.actorList[i].GetProperty().SetOpacity(1)
               self.actorList[i].Modified()
-              self.trajactoryActorList[i].GetProperty().SetOpacity(1)
+              self.trajactoryActorList[i].SetVisibility(True)
               self.trajactoryActorList[i].Modified()
               for mm in range(max_point_per_person -1 ):
                 self.middlePointsActorList[i][mm].SetVisibility(True)
@@ -233,7 +233,10 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
                 if i not in wanted_list:
                   self.actorList[i].GetProperty().SetOpacity(0)
                   self.actorList[i].Modified()
-                self.trajactoryActorList[i].GetProperty().SetOpacity(0)
+                else:
+                  self.actorList[i].GetProperty().SetOpacity(1)
+                  self.actorList[i].Modified()
+                self.trajactoryActorList[i].SetVisibility(False)
                 self.trajactoryActorList[i].Modified()
                 for mm in range(max_point_per_person -1 ):
                   self.middlePointsActorList[i][mm].SetVisibility(False)
@@ -241,10 +244,12 @@ class MouseInteractorHighLightActor(vtk.vtkInteractorStyleTrackballCamera):
  
               else:
                 # selected point
+                self.actorList[i].GetProperty().SetOpacity(1)
+                self.actorList[i].Modified()
                 for mm in range(max_point_per_person -1 ):
                   self.middlePointsActorList[i][mm].SetVisibility(True)
                   self.middlePointsActorList[i][mm].Modified()
-                self.trajactoryActorList[i].GetProperty().SetOpacity(1)
+                self.trajactoryActorList[i].SetVisibility(True)
                 self.trajactoryActorList[i].Modified()
           
             self.LastPickedActorId = curid
@@ -674,9 +679,8 @@ if __name__ == '__main__':
       renderer.AddActor(middlePointsActorList[i][j])
   
   renderer.AddActor(linesActor)
-  if len(sys.argv) == 3 and sys.argv[2] == 'track':
-    for i in range(len(trajactoryActorList)):
-      renderer.AddActor(trajactoryActorList[i])
+  for i in range(len(trajactoryActorList)):
+    renderer.AddActor(trajactoryActorList[i])
 
   renderer.ResetCamera()
   renderWindow.Render()
