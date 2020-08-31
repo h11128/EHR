@@ -2,6 +2,11 @@
 
 This project is to visualize the EHR data using star coordinates in 3D space.
 
+EHR data: https://drive.google.com/drive/folders/1pb0CCT6Pnp0WZagkqrKtTHVpDsGsokEf
+star coordinate: https://en.wikipedia.org/wiki/Celestial_coordinate_system
+report: report.pdf 
+
+
 # Data normallization (Just in case needed, but you don't have to do this. EHR.csv already exist)
 python normalizeData.py > EHR.csv
 
