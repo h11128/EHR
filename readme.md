@@ -2,8 +2,8 @@
 
 This project is to visualize the EHR data using star coordinates in 3D space.
 
-EHR data: https://drive.google.com/drive/folders/1pb0CCT6Pnp0WZagkqrKtTHVpDsGsokEf
-star coordinate: https://en.wikipedia.org/wiki/Celestial_coordinate_system
+EHR data: https://drive.google.com/drive/folders/1pb0CCT6Pnp0WZagkqrKtTHVpDsGsokEf  
+star coordinate: https://en.wikipedia.org/wiki/Celestial_coordinate_system  
 report: report.pdf 
 
 
